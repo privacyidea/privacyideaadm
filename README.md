@@ -1,1 +1,4 @@
-This is the admin command line client for the privacyIDEA searver.
+privacyideaadm
+==============
+
+This is a command line client to manage the privacyIDEA server.
