@@ -18,7 +18,7 @@
 
 '''
 
-VERSION = '1.0dev4'
+VERSION = '1.1dev0'
 import os
 import subprocess
 import datetime
@@ -48,7 +48,9 @@ COMMANDS = [ 'listtoken', 'inittoken', 'assigntoken',
             'getrealms', 'setrealm', 'deleterealm', 'setdefaultrealm',
             'getresolvers', 'deleteresolver', 'setresolver', 'loadtokens',
             'yubikey_mass_enroll', 'etokenng_mass_enroll',
-            'securitymodule' ]
+            'securitymodule',
+            'createmachine', 'showmachine', 'deletemachine'
+             ]
 
 def usage():
     print "usage: %s --url=<url> --admin=<adminusername> --cert=<cert> --key=<rsakey> --command=<command> --version" % sys.argv[0]
@@ -88,6 +90,12 @@ def usage():
     removeetoken:   --serial | --user
     resynctoken:    --serial | --user   --otp1  --otp2
     set:       [--user | --serial ] --pin --maxfailcount --syncwindow --otplen
+
+    machine and client commands
+    ---------------------------
+    createmachine:   --name --ip  --desc  --decommission
+    showmachine:     
+    deletemachine:
 
     Security Modules
     ----------------
@@ -373,7 +381,8 @@ def main():
                 'yubiprefix=', 'yubiprefixrandom=', 'yubimode=', 'yubislot=',
                 'yubiprefixserial', 'yubiCR',
                 'password=', 'csv', 'export_fields=',
-                'automate=', 'realm='] + file_opts + ldap_opts)
+                'automate=', 'realm=',
+                'name=', 'ip=', 'desc=', 'decommission='] + file_opts + ldap_opts)
 
     except GetoptError:
         print "There is an error in your parameter syntax:"
@@ -491,6 +500,15 @@ def main():
             config_file = arg
         elif opt in ('--realm='):
             param["realm"] = arg
+        elif opt in ('--ip='):
+            param["ip"] = arg
+        elif opt in ('--name='):
+            param["name"] = arg
+        elif opt in ('--decommission='):
+            param["decommission"] = arg
+        elif opt in ('--desc='):
+            param["desc"] = arg
+        
 
 
         for l_opt in ldap_opts:
@@ -769,7 +787,25 @@ def main():
                         'pskc_preshared': None })
         showresult(ret)
 
+    elif (config.get("command") == "createmachine"):
+        ret = lotpc.connect("/machine/create", {},
+                            { "name" : param.get("name"),
+                             "ip" : param.get("ip",""),
+                             "desc" : param.get("desc","")})
+        showresult(ret)
+    elif (config.get("command") == "showmachine"):
+        ret = lotpc.connect("/machine/show", {}, 
+                            { "name" : param.get("name")} if param.get("name") else {} )
+        showresult(ret)
+    elif (config.get("command") == "deletemachine"):
+        if param.get("name"):
+            ret = lotpc.connect("/machine/delete", {}, 
+                            { "name" : param.get("name")})
+            showresult(ret)
+        else:
+            print "You need to specify a --name!"
     else:
+
         print "Nothing to do and nothing done."
 
 

@@ -236,6 +236,9 @@ class privacyideaclient:
                 The data, that would be passed in a POST request.
                 As soon as the parameter data is provided, we'll do a POST request.
                 
+            json_format:
+                The response of the API request is a json format
+                
         returns:
             Returns the JSON result as a dictionary.
                 
