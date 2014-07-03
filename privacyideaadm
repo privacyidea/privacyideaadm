@@ -49,7 +49,8 @@ COMMANDS = [ 'listtoken', 'inittoken', 'assigntoken',
             'getresolvers', 'deleteresolver', 'setresolver', 'loadtokens',
             'yubikey_mass_enroll', 'etokenng_mass_enroll',
             'securitymodule',
-            'createmachine', 'showmachine', 'deletemachine'
+            'createmachine', 'showmachine', 'deletemachine',
+            'machine_addtoken', 'machine_showtoken', 'machine_deltoken'
              ]
 
 def usage():
@@ -91,11 +92,17 @@ def usage():
     resynctoken:    --serial | --user   --otp1  --otp2
     set:       [--user | --serial ] --pin --maxfailcount --syncwindow --otplen
 
-    machine and client commands
+    client machine commands
     ---------------------------
-    createmachine:   --name --ip  --desc  --decommission
-    showmachine:     
-    deletemachine:
+    createmachine:   --name [--ip]  [--desc]  [--decommission]
+    showmachine:     [--name]  
+    deletemachine:   --name
+    
+    The token-machine-binding is identified by the tuple (name, serial, app)
+    
+    machine_addtoken:   --name  --serial  --app
+    machine_showtoken:  [--name] [--serial] [--app]
+    machine_deltoken:   --name  --serial  --app
 
     Security Modules
     ----------------
@@ -382,7 +389,7 @@ def main():
                 'yubiprefixserial', 'yubiCR',
                 'password=', 'csv', 'export_fields=',
                 'automate=', 'realm=',
-                'name=', 'ip=', 'desc=', 'decommission='] + file_opts + ldap_opts)
+                'name=', 'ip=', 'desc=', 'decommission=', 'app='] + file_opts + ldap_opts)
 
     except GetoptError:
         print "There is an error in your parameter syntax:"
@@ -508,7 +515,8 @@ def main():
             param["decommission"] = arg
         elif opt in ('--desc='):
             param["desc"] = arg
-        
+        elif opt in ('--app='):
+            param["app"] = arg
 
 
         for l_opt in ldap_opts:
@@ -565,15 +573,15 @@ def main():
             tabdelim = '|'
             tabvisible = [0, 1, 2, 3, 4, 5, 6, 7, 8]
             tabhead = ['Id', 'Desc', 'S/N', 'User', 'Resolver', 'MaxFail', 'Active', 'FailCount', 'Window']
-            tabentry = ['privacyidea.TokenId',
-                         'privacyidea.TokenDesc',
-                         'privacyidea.TokenSerialnumber',
+            tabentry = ['privacyIDEA.TokenId',
+                         'privacyIDEA.TokenDesc',
+                         'privacyIDEA.TokenSerialnumber',
                          'User.username',
-                         'privacyidea.IdResClass',
-                         'privacyidea.MaxFail',
-                         'privacyidea.Isactive',
-                         'privacyidea.FailCount',
-                         'privacyidea.SyncWindow']
+                         'privacyIDEA.IdResClass',
+                         'privacyIDEA.MaxFail',
+                         'privacyIDEA.Isactive',
+                         'privacyIDEA.FailCount',
+                         'privacyIDEA.SyncWindow']
             dumpresult(result['status'], result['value']['data'], { 'tabsize' : tabsize, 'tabstr' : tabstr,
                         'tabdelim' : tabdelim, 'tabvisible': tabvisible,
                         'tabhead' : tabhead, 'tabentry' : tabentry })
@@ -804,6 +812,26 @@ def main():
             showresult(ret)
         else:
             print "You need to specify a --name!"
+    elif (config.get("command") == "machine_addtoken"):
+        ret = lotpc.connect("/machine/addtoken", {}, 
+                            { "name" : param.get("name"),
+                             "serial" : param.get("serial"),
+                             "application" : param.get("app")})
+        showresult(ret)
+    elif (config.get("command") == "machine_showtoken"):
+        p = {}
+        for key in ["name", "serial", "app"]:
+            if param.get(key):
+                p[key] = param.get(key)
+        
+        ret = lotpc.connect("/machine/showtoken", {}, p)
+        showresult(ret)
+    elif (config.get("command") == "machine_deltoken"):
+        ret = lotpc.connect("/machine/deltoken", {}, 
+                            { "name" : param.get("name"),
+                             "serial" : param.get("serial"),
+                             "application" : param.get("app")})
+        showresult(ret)
     else:
 
         print "Nothing to do and nothing done."
