@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 #  privacyIDEA is a fork of LinOTP
 #  May 08, 2014 Cornelius Kölbel
+#  Jul 16, 2014 Cornelius Kölbel: add machine functions
 #  License:  AGPLv3
 #  contact:  http://www.privacyidea.org
 #
@@ -18,8 +19,8 @@
 
 '''
 
-VERSION = '1.1dev0'
-import os
+VERSION = '1.2dev0'
+
 import subprocess
 import datetime
 from getopt import getopt, GetoptError
@@ -31,6 +32,7 @@ from privacyideautils.yubikey import create_static_password
 import ConfigParser
 import pprint
 import smtplib
+import binascii
 from email.mime.text import MIMEText
 
 
@@ -38,10 +40,10 @@ YUBI_STATIC_MODE = 3
 YUBI_OATH_MODE = 2
 YUBI_AES_MODE = 1
 
-EDITION="CE"
+EDITION = "CE"
 
 REALM = "privacyIDEA admin area (admin/admin)"
-COMMANDS = [ 'listtoken', 'inittoken', 'assigntoken',
+COMMANDS = ['listtoken', 'inittoken', 'assigntoken',
             'importtoken', 'disabletoken', 'enabletoken',
             'resynctoken', 'removetoken', 'set',
             'unassigntoken', 'listuser', 'getconfig', 'setconfig',
@@ -50,8 +52,10 @@ COMMANDS = [ 'listtoken', 'inittoken', 'assigntoken',
             'yubikey_mass_enroll', 'etokenng_mass_enroll',
             'securitymodule',
             'createmachine', 'showmachine', 'deletemachine',
-            'machine_addtoken', 'machine_showtoken', 'machine_deltoken'
-             ]
+            'machine_addtoken', 'machine_showtoken', 'machine_deltoken',
+            'showtokenapps'
+            ]
+
 
 def usage():
     print "usage: %s --url=<url> --admin=<adminusername> --cert=<cert> --key=<rsakey> --command=<command> --version" % sys.argv[0]
@@ -95,8 +99,9 @@ def usage():
     client machine commands
     ---------------------------
     createmachine:   --name [--ip]  [--desc]  [--decommission]
-    showmachine:     [--name]  
     deletemachine:   --name
+    showmachine:     [--name]
+    showtokenapps:   [--name] [--app] [--serial] [--challenge|--challenge_hex]
     
     The token-machine-binding is identified by the tuple (name, serial, app)
     
@@ -170,13 +175,6 @@ def usage():
 """
 
 
-
-
-def showresult(rv):
-    pp = pprint.PrettyPrinter(indent=4)
-    print pp.pformat(rv['result'])
-
-
 def yubi_mass_enroll(lotpc,
                      proc_params,
                      yubi_mode,
@@ -202,37 +200,37 @@ def yubi_mass_enroll(lotpc,
         print "\nPlease insert the next yubikey.",
         sys.stdout.flush()
         submit_param = {}
-        #input = raw_input("Please insert the next yubikey and press enter (x=Exit): ")
-        #if "x" == input.lower():
+        # input = raw_input("Please insert the next yubikey and press enter (x=Exit): ")
+        # if "x" == input.lower():
         #    break
-        ret = yp.wait_for_new_yubikey()
+        _ret = yp.wait_for_new_yubikey()
         otpkey, serial = enrollYubikey(debug=False,
-                                        prefix_serial=yubi_prefix_serial,
-                                        fixed_string=yubi_prefix,
-                                        len_fixed_string=yubi_prefix_random,
-                                        slot=yubi_slot,
-                                        mode=yubi_mode,
-                                        challenge_response=yubi_cr)
+                                       prefix_serial=yubi_prefix_serial,
+                                       fixed_string=yubi_prefix,
+                                       len_fixed_string=yubi_prefix_random,
+                                       slot=yubi_slot,
+                                       mode=yubi_mode,
+                                       challenge_response=yubi_cr)
         description = proc_params.get('description', "mass enrolled")
         if yubi_mode == YUBI_OATH_MODE:
             # According to http://www.openauthentication.org/oath-id/prefixes/
             # The OMP of Yubico is UB
             # As TokenType we use OM (oath mode)
-            submit_param = {'serial':"UBOM%s_%s" % (serial, yubi_slot),
-                     'otpkey':otpkey,
-                     'description':description}
+            submit_param = {'serial': "UBOM%s_%s" % (serial, yubi_slot),
+                            'otpkey': otpkey,
+                            'description': description}
             if yubi_cr:
                 submit_param['type'] = 'TOTP'
                 submit_param['timeStep'] = 30
 
         elif yubi_mode == YUBI_STATIC_MODE:
             password = create_static_password(otpkey)
-            #print "otpkey   ", otpkey
-            #print "password ", password
-            submit_param = {'serial':"UBSM%s_%s" % (serial, yubi_slot),
-                     'otpkey':password,
-                     'type': "pw",
-                     'description':description}
+            # print "otpkey   ", otpkey
+            # print "password ", password
+            submit_param = {'serial': "UBSM%s_%s" % (serial, yubi_slot),
+                            'otpkey': password,
+                            'type': "pw",
+                            'description': description}
 
         elif yubi_mode == YUBI_AES_MODE:
             yubi_otplen = 32
@@ -246,10 +244,10 @@ def yubi_mass_enroll(lotpc,
             # The OMP of Yubico is UB
             # As TokenType we use AM (AES mode)
             submit_param = {'type': 'yubikey',
-                   'serial':"UBAM%s_%s" % (serial, yubi_slot),
-                   'otpkey':otpkey,
-                   'otplen':yubi_otplen,
-                   'description':description}
+                            'serial': "UBAM%s_%s" % (serial, yubi_slot),
+                            'otpkey': otpkey,
+                            'otplen': yubi_otplen,
+                            'description': description}
 
         else:
             print "Unknown Yubikey mode"
@@ -346,57 +344,59 @@ def read_config(config_file):
 ##### main
 
 def main():
-    config = {
-              "host" : None,
-              "command" : None,
-              "file" : None,
-              "admin" : None,
-              "password" : None,
-              "param" : {},
-              "etng" : False,
-              "pytoken" : False,
-              "certificate" : None,
-              "key" : None,
-              "protocol" : "http",
-              "authtype" : "Digest",
-              "yubi_prefix" : None,
-              "yubi_prefix_random" : 0,
-              "yubi_mode" : YUBI_OATH_MODE,
-              "yubi_slot" : 1,
-              "yubi_prefix_serial" : False,
-              "yubi_cr" : False,
+    config = {"host": None,
+              "command": None,
+              "file": None,
+              "admin": None,
+              "password": None,
+              "param": {},
+              "etng": False,
+              "pytoken": False,
+              "certificate": None,
+              "key": None,
+              "protocol": "http",
+              "authtype": "Digest",
+              "yubi_prefix": None,
+              "yubi_prefix_random": 0,
+              "yubi_mode": YUBI_OATH_MODE,
+              "yubi_slot": 1,
+              "yubi_prefix_serial": False,
+              "yubi_cr": False,
               "realm": None,
-              "csv" : False,
-              "export_fields" : None,
-              "mail_from" : "privacyidea@localhost",
-              "mail_to" : None,
-              "mail_subject" : "privacyIDEA notification",
-              "mail_host" : None
-    }
+              "csv": False,
+              "export_fields": None,
+              "mail_from": "privacyidea@localhost",
+              "mail_to": None,
+              "mail_subject": "privacyIDEA notification",
+              "mail_host": None
+              }
     config_file = None
     _ask_password = None
 
     try:
-        opts, args = getopt(sys.argv[1:], "hvU:a:C:k:c:f:u:s:p:d:ew:t:w:m:H:r:",
-                ["help", "version", "url=", "admin=", "cert=", "key=", "command=", "file=",
-                "user=", "serial=", "pin=", "otpkey=", "description=", "etng", "maxfailcount=",
-                "syncwindow=", "otplen=", "otp1=", "otp2=", "pytoken", "type=", "otppin=",
-                "config=",
-                'realm=', 'resolver=', 'rtype=',
-                'module=',
-                'label=', 'authtype=',
-                'yubiprefix=', 'yubiprefixrandom=', 'yubimode=', 'yubislot=',
-                'yubiprefixserial', 'yubiCR',
-                'password=', 'csv', 'export_fields=',
-                'automate=', 'realm=',
-                'name=', 'ip=', 'desc=', 'decommission=', 'app='] + file_opts + ldap_opts)
+        opts, _args = getopt(sys.argv[1:],
+                             "hvU:a:C:k:c:f:u:s:p:d:ew:t:w:m:H:r:",
+                             ["help", "version", "url=", "admin=", "cert=",
+                              "key=", "command=", "file=",
+                              "user=", "serial=", "pin=", "otpkey=",
+                              "description=", "etng", "maxfailcount=",
+                              "syncwindow=", "otplen=", "otp1=", "otp2=",
+                              "pytoken", "type=", "otppin=",
+                              "config=", 'realm=', 'resolver=', 'rtype=',
+                              'module=', 'label=', 'authtype=', 'yubiprefix=',
+                              'yubiprefixrandom=', 'yubimode=', 'yubislot=',
+                              'yubiprefixserial', 'yubiCR', 'password=',
+                              'csv', 'export_fields=', 'automate=', 'realm=',
+                              'name=', 'ip=', 'desc=', 'decommission=', 'app=',
+                              'challenge=',
+                              'challenge_hex='] + file_opts + ldap_opts)
 
     except GetoptError:
         print "There is an error in your parameter syntax:"
         usage()
         sys.exit(1)
 
-##### Creating Parameter list
+# #### Creating Parameter list
     param = {}
 
     for opt, arg in opts:
@@ -517,7 +517,10 @@ def main():
             param["desc"] = arg
         elif opt in ('--app='):
             param["app"] = arg
-
+        elif opt in ('--challenge='):
+            param["challenge"] = arg
+        elif opt in ('--challenge_hex='):
+            param["challenge_hex"] = arg
 
         for l_opt in ldap_opts:
             o = l_opt.split('=')
@@ -543,18 +546,19 @@ def main():
 
     # Create the privacyideaclient instance
     lotpc = privacyideaclient(config.get("protocol"),
-                         config.get("host"),
-                         admin=config.get("admin"),
-                         adminpw=config.get("password"),
-                         cert=config.get("certificate"),
-                         key=config.get("key"),
-                         authtype=config.get("authtype"))
+                              config.get("host"),
+                              admin=config.get("admin"),
+                              adminpw=config.get("password"),
+                              cert=config.get("certificate"),
+                              key=config.get("key"),
+                              authtype=config.get("authtype"))
 
-##### The commands
+# #### The commands
 
     if (config.get("command") == "listtoken"):
-        ## TODO: at the moment we support the export to cifs share or sending by mail only
-        ##       for the command "listtoken". The should be refactored one day...
+        # TODO: at the moment we support the export to cifs share or sending
+        #       by mail only
+        #       for the command "listtoken". The should be refactored one day.
         if config.get("csv_format"):
             param['outform'] = 'csv'
             if config.get("export_fields"):
@@ -568,33 +572,37 @@ def main():
             r1 = lotpc.listtoken(param)
             result = r1['result']
 
-            tabsize = [4, 16, 12, 20, 20, 4, 4, 4, 4]
-            tabstr = ["%4s", "%16s", "%12s", "%20s", "%20s", "%4s", "%4s", "%4s", "%4s", "%4s"]
+            tabsize = [4, 16, 14, 20, 20, 4, 4, 4, 4]
+            tabstr = ["%4s", "%16s", "%14s", "%20s", "%20s", "%4s", "%4s", "%4s", "%4s", "%4s"]
             tabdelim = '|'
             tabvisible = [0, 1, 2, 3, 4, 5, 6, 7, 8]
             tabhead = ['Id', 'Desc', 'S/N', 'User', 'Resolver', 'MaxFail', 'Active', 'FailCount', 'Window']
             tabentry = ['privacyIDEA.TokenId',
-                         'privacyIDEA.TokenDesc',
-                         'privacyIDEA.TokenSerialnumber',
-                         'User.username',
-                         'privacyIDEA.IdResClass',
-                         'privacyIDEA.MaxFail',
-                         'privacyIDEA.Isactive',
-                         'privacyIDEA.FailCount',
-                         'privacyIDEA.SyncWindow']
-            dumpresult(result['status'], result['value']['data'], { 'tabsize' : tabsize, 'tabstr' : tabstr,
-                        'tabdelim' : tabdelim, 'tabvisible': tabvisible,
-                        'tabhead' : tabhead, 'tabentry' : tabentry })
+                        'privacyIDEA.TokenDesc',
+                        'privacyIDEA.TokenSerialnumber',
+                        'User.username',
+                        'privacyIDEA.IdResClass',
+                        'privacyIDEA.MaxFail',
+                        'privacyIDEA.Isactive',
+                        'privacyIDEA.FailCount',
+                        'privacyIDEA.SyncWindow']
+            dumpresult(result['status'],
+                       result['value']['data'],
+                       {'tabsize': tabsize,
+                        'tabstr': tabstr,
+                        'tabdelim': tabdelim,
+                        'tabvisible': tabvisible,
+                        'tabhead': tabhead,
+                        'tabentry': tabentry})
     elif (config.get("command") == "listuser"):
-        r1 = lotpc.userlist({'username':'*'})
+        r1 = lotpc.userlist({'username': '*'})
         result = r1['result']
         tabentry = ['username',
-                     'surname',
-                     'userid',
-                     'phone',
-                     'mobile',
-                     'email',
-                     ]
+                    'surname',
+                    'userid',
+                    'phone',
+                    'mobile',
+                    'email']
         tabsize = [20, 20, 20, 20, 20, 20]
         tabstr = ["%20s", "%20s", "%20s", "%20s", "%20s", "%20s"]
         tabdelim = '|'
@@ -787,36 +795,56 @@ def main():
         filename = 'plain-value-pskc.xml'
         f = open(filename, 'r')
         xml_data = f.read()
-        ret = lotpc.connect("/admin/loadtokens", {},
-                    { 'type' : 'pskc',
-                        'file' : xml_data,
-                        'pskc_type' : 'plain',
-                        'pskc_password' : None,
-                        'pskc_preshared': None })
+        ret = lotpc.connect("/admin/loadtokens",
+                            {},
+                            {'type': 'pskc',
+                             'file': xml_data,
+                             'pskc_type': 'plain',
+                             'pskc_password': None,
+                             'pskc_preshared': None})
         showresult(ret)
 
     elif (config.get("command") == "createmachine"):
         ret = lotpc.connect("/machine/create", {},
-                            { "name" : param.get("name"),
-                             "ip" : param.get("ip",""),
-                             "desc" : param.get("desc","")})
+                            {"name": param.get("name"),
+                             "ip": param.get("ip", ""),
+                             "desc": param.get("desc", "")})
         showresult(ret)
     elif (config.get("command") == "showmachine"):
-        ret = lotpc.connect("/machine/show", {}, 
-                            { "name" : param.get("name")} if param.get("name") else {} )
+        ret = lotpc.connect("/machine/show",
+                            {},
+                            {"name": param.get("name")} if param.get("name") else {})
+        showresult(ret)
+    elif (config.get("command") == "showtokenapps"):
+        tokenapps_param = {}
+        if param.get("name"):
+            tokenapps_param["name"] = param.get("name")
+        if param.get("app"):
+            tokenapps_param["application"] = param.get("app")
+        if param.get("serial"):
+            tokenapps_param["serial"] = param.get("serial")
+        if param.get("challenge"):
+            # the controller requires the challenge to be in hex
+            tokenapps_param["challenge"] = binascii.hexlify(param.get("challenge"))
+        elif param.get("challenge_hex"):
+            tokenapps_param["challenge"] = param.get("challenge_hex")
+        print "calling with %r" % tokenapps_param
+        ret = lotpc.connect("/machine/gettokenapps", {}, tokenapps_param)
         showresult(ret)
     elif (config.get("command") == "deletemachine"):
         if param.get("name"):
-            ret = lotpc.connect("/machine/delete", {}, 
-                            { "name" : param.get("name")})
+            ret = lotpc.connect("/machine/delete",
+                                {},
+                                {"name": param.get("name")})
             showresult(ret)
         else:
             print "You need to specify a --name!"
     elif (config.get("command") == "machine_addtoken"):
-        ret = lotpc.connect("/machine/addtoken", {}, 
-                            { "name" : param.get("name"),
-                             "serial" : param.get("serial"),
-                             "application" : param.get("app")})
+        ret = lotpc.connect("/machine/addtoken",
+                            {},
+                            {"name": param.get("name"),
+                             "serial": param.get("serial"),
+                             "application": param.get("app")})
         showresult(ret)
     elif (config.get("command") == "machine_showtoken"):
         p = {}
@@ -827,10 +855,11 @@ def main():
         ret = lotpc.connect("/machine/showtoken", {}, p)
         showresult(ret)
     elif (config.get("command") == "machine_deltoken"):
-        ret = lotpc.connect("/machine/deltoken", {}, 
-                            { "name" : param.get("name"),
-                             "serial" : param.get("serial"),
-                             "application" : param.get("app")})
+        ret = lotpc.connect("/machine/deltoken",
+                            {},
+                            {"name": param.get("name"),
+                             "serial": param.get("serial"),
+                             "application": param.get("app")})
         showresult(ret)
     else:
 

@@ -1,0 +1,273 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  privacyIDEA
+#  (c) 2014 Cornelius Kölbel, cornelius@privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''
+This tool is used to fill the LUKS keyslot with the response
+generated from the privacyIDEA server
+'''
+
+VERSION = '1.2dev0'
+DEBUG = False
+
+import subprocess
+from getopt import getopt, GetoptError
+import getpass
+from privacyideautils.clientutils import *
+import binascii
+import socket
+from tempfile import NamedTemporaryFile
+import os, stat
+import time
+
+SLOT_OPTION_KEY = "option_slot"
+PARTITION_OPTION_KEY = "option_partition"
+DELAY = 2
+
+def help():
+    print "%s --url=<url> --admin=<adminusername>" % sys.argv[0]
+    print """ 
+    --url/-U        : The base url of the privacyIDEA server. Something like
+                      http://localhost:5000 or https://privacyidea:443
+    --admin=/-a     : administrator name
+    --password=/-p  : the password of the administrator
+    --lukspassword= : the password for the LUKS usage
+    --name=         : The name of the machine
+    --luksslot=     : if the server has no information on a LUKS slot, we
+                      can set the slot here.
+    --serial=       : The serial numer of the token, if only one token is
+                      to be retrieved.
+    --clearslot     : If this bool parameter is given, the slot is cleared
+                      prior the key is written. 
+ """
+    sys.exit(2)
+
+
+def set_slot(key=None,
+             slot=None,
+             partition=None,
+             clear_slot=False):
+    '''
+    Set the "key" on the LUKS slot "slot"
+    
+    touch $TMP_FILE
+    chmod 600 $TMP_FILE
+    echo -n "key" > $TMP_FILE
+    cryptsetup --key-slot=$SLOT luksAddKey $DISK $TMP_FILE
+    rm $TMP_FILE
+    '''
+    # clear the slot
+    if clear_slot:
+        print("\nClear the slot %i. You will need to provide an "
+              "existing LUKS password!" % slot)
+        time.sleep(DELAY)
+        p = subprocess.Popen(["cryptsetup",
+                              "luksKillSlot",
+                              partition,
+                              "%i" % slot],
+                             cwd=None,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             shell=False)
+        (result, error) = p.communicate()
+        rcode = p.returncode
+        print result, error, rcode
+
+
+    print("\nWe are about to set a new LUKS password in slot %i "
+          "on partition %r." % (slot, partition))
+    print "You will be asked for an existing slot password!"
+    time.sleep(DELAY)
+        
+    f = NamedTemporaryFile(delete=False)
+    filename = f.name
+    f.write(key)
+    f.close()
+    
+    # create the slot
+    p = subprocess.Popen(["cryptsetup",
+                          "--key-slot=%i" % slot,
+                          "luksAddKey",
+                          partition,
+                          filename],
+                         cwd=None,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         shell=False)
+    (result, error) = p.communicate()
+    rcode = p.returncode
+    print result, error, rcode
+    
+    # overwrite and clean up the mess
+    f = open(filename, "w")
+    f.write("X" * 40)
+    f.close()
+    os.unlink(filename)
+
+##### main
+
+def main():
+    try:
+        opts, _args = getopt(sys.argv[1:],
+                             "hU:a:p:",
+                             ["help",
+                              "url=",
+                              "admin=",
+                              "password=",
+                              "lukspassword=",
+                              "luksslot=",
+                              "name=",
+                              "clearslot"])
+
+    except GetoptError:
+        print "Unknown parameter:"
+        help()
+
+    proto = None
+    host = None
+    admin = None
+    password = None
+    slot = None
+    lukspassword = None
+    serial = None
+    name = None
+    clear_slot = False
+    
+    for opt, arg in opts:      
+        if opt in ('-h', '--help'):
+            help()
+            sys.exit(0)
+        elif opt in ('-U', '--url'):
+            if arg.startswith('https://'):
+                proto = "https"
+                host = arg[8:]
+            elif arg.startswith('http://'):
+                proto = "http"
+                host = arg[7:]
+            else:
+                print "The URL needs to start with http or https [" + arg + "]"
+            url = arg 
+        elif opt in ('-a', '--admin'):
+            admin = arg
+        elif opt in ('-p', '--password'):
+            password = arg
+        elif opt in ('--name'):
+            name = arg
+        elif opt in ('--lukspassword'):
+            lukspassword = arg
+        elif opt in ('--luksslot'):
+            slot = arg
+        elif opt in ('--serial'):
+            serial = arg
+        elif opt in ('--clearslot'):
+            clear_slot = True
+            
+    if host is None or proto is None or admin is None:
+        help()
+        
+    if password is None:
+        password = getpass.getpass("Password for %r:" % admin)
+
+    lotpc = privacyideaclient(proto,
+                              host,
+                              admin=admin,
+                              adminpw=password)
+    
+    if lukspassword is None:
+        lukspassword = getpass.getpass("Yubikey password for LUKS slot:")
+        
+    if name is None:
+        name = socket.gethostname()
+
+    params = {"name": name,
+              "application": "luks",
+              "challenge": binascii.hexlify(lukspassword)}
+    if serial:
+        params["serial"] = serial
+    ret = lotpc.connect("/machine/gettokenapps", {}, params)
+    result = ret.get("result")
+    total = result.get("value").get("total")
+    
+    if total > 1:
+        # More than one token found!
+        machines = result.get("value").get("machines")
+        print "Available serial numbers:"
+        print "-------------------------" 
+        for _machine_id, machine in machines.items():
+            print machine.get("serial")
+        raise Exception("Several tokens are assigned to the application"
+                        "on this client. You need to specify one token"
+                        "with the --serial parameter")
+    elif total == 0:
+        # No token available
+        raise Exception("No token found for the application on this machine!")
+    else:
+        # exactly one token
+        machines = result.get("value").get("machines")
+        machine_values = machines.get(machines.keys()[0])
+        auth_item = machine_values.get("auth_item")
+        luks_key = auth_item.get("response")
+        if len(luks_key) < 40:
+            raise Exception("The returned response is to small! %r" % len(luks_key))
+        options = machine_values.get("options")
+        server_slot = options.get(SLOT_OPTION_KEY)
+        server_partition = options.get(PARTITION_OPTION_KEY)
+        if server_slot is None:
+            if slot:
+                # TODO: Now we need to set the slot on the server
+                pass
+            else:
+                raise Exception("The server is missing a slot information "
+                                "for this token on this application. "
+                                "You need to set an option 'option_slot'")
+        
+        if server_partition is None:
+            raise Exception("The server is missing a partition information "
+                            "for this token on this application. "
+                            "You need to set an option 'option_partition'")
+        '''
+        A server slot exists
+        Now we can use
+        - server_slot
+        - luks_key 
+        to fill the LUKS slot
+        '''
+        server_slot = int(server_slot)
+        if server_slot == 0:
+            raise Exception("We will not overwrite the LUKS slot 0! "
+                            "set another slot on the server!")
+        if server_slot > 7:
+            raise Exception("The maximum slot number is 7! "
+                            "correct the 'option_slot' on the server "
+                            "side.")
+        set_slot(key=luks_key,
+                 slot=server_slot,
+                 partition=server_partition,
+                 clear_slot=clear_slot)
+
+
+
+if __name__ == '__main__':
+    if DEBUG:
+        main()
+    else:
+        try:
+            main()
+        except Exception as ex:
+            print "Error: %s" % ex
+            sys.exit(5)

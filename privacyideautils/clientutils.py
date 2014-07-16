@@ -24,6 +24,7 @@ import logging
 import logging.handlers
 import cookielib
 import traceback
+import pprint
 
 if sys.version_info[0:2] >= (2, 6):
     import json
@@ -51,6 +52,12 @@ ldap_opts_map = { 'rl_uri' : 'LDAPURI',
                 'rl_attrmap' : 'USERINFO',
                 'rl_loginattr' : 'LOGINNAMEATTRIBUTE'
                 }
+
+
+def showresult(rv):
+    pp = pprint.PrettyPrinter(indent=4)
+    print pp.pformat(rv['result'])
+
 
 class privacyIDEAClientError(Exception):
     '''
