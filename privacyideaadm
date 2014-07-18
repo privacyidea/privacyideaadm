@@ -193,7 +193,7 @@ def yubi_mass_enroll(lotpc,
     :param yubi_prefix_serial: serial number added to the prefix
     :param yubi_prefix: the public prefix
     :param yubi_prefix_random: the rendom prefix
-    :param yubi_cr: boolean - uses as TOTP token
+    :param yubi_cr: boolean - uses as TOTP token a.k.a. Challenge Response mode
     '''
     yp = YubikeyPlug()
     while 0 == 0:
@@ -205,6 +205,7 @@ def yubi_mass_enroll(lotpc,
         #    break
         _ret = yp.wait_for_new_yubikey()
         otpkey, serial = enrollYubikey(debug=False,
+                                       APPEND_CR=not yubi_cr,
                                        prefix_serial=yubi_prefix_serial,
                                        fixed_string=yubi_prefix,
                                        len_fixed_string=yubi_prefix_random,
