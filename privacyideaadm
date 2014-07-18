@@ -25,16 +25,23 @@ import subprocess
 import datetime
 from getopt import getopt, GetoptError
 import getpass
-from privacyideautils.clientutils import *
+from privacyideautils.clientutils import showresult
+from privacyideautils.clientutils import dumpresult
+from privacyideautils.clientutils import privacyideaclient
+from privacyideautils.clientutils import ldap_opts
+from privacyideautils.clientutils import file_opts
+from privacyideautils.clientutils import initetng
+from privacyideautils.clientutils import etng
+from privacyideautils.clientutils import pyToken
 from privacyideautils.yubikey import enrollYubikey
 from privacyideautils.yubikey import YubikeyPlug
 from privacyideautils.yubikey import create_static_password
 import ConfigParser
-import pprint
 import smtplib
 import binascii
 from email.mime.text import MIMEText
-
+import sys
+import os
 
 YUBI_STATIC_MODE = 3
 YUBI_OATH_MODE = 2
@@ -58,7 +65,8 @@ COMMANDS = ['listtoken', 'inittoken', 'assigntoken',
 
 
 def usage():
-    print "usage: %s --url=<url> --admin=<adminusername> --cert=<cert> --key=<rsakey> --command=<command> --version" % sys.argv[0]
+    print("usage: %s --url=<url> --admin=<adminusername> --cert=<cert> "
+          "--key=<rsakey> --command=<command> --version" % sys.argv[0])
     print """"  --url/-U     : The base url of the privacyIDEA server. Something like
                  http://localhost:5000 or https://privacyidea:443
   --admin/-a   : If the admin interface of the privacyIDEA service requires authentication
@@ -620,14 +628,14 @@ def main():
         r1 = lotpc.writeserverconfig(param)
         showresult(r1)
     elif (config.get("command") == "assigntoken"):
-        if 'user' not in param or 'serial' not in param :
+        if 'user' not in param or 'serial' not in param:
             print "To assign a token, we need a username and a tokenserial:"
             print "   --command=assigntoken --user=<username> --serial=<tokenserial>"
             sys.exit(1)
         r1 = lotpc.assigntoken(param)
         showresult(r1)
     elif (config.get("command") == "unassigntoken"):
-        if 'serial' not in param :
+        if 'serial' not in param:
             print "To unassign a token, we need a tokenserial:"
             print "   --command=unassigntoken --serial=<tokenserial>"
             sys.exit(1)
@@ -642,7 +650,6 @@ def main():
                          config.get("yubi_prefix_random"),
                          config.get("yubi_cr"))
 
-
     elif (config.get("command") == "etokenng_mass_enroll"):
         print "Mass-Enrolling eToken NG OTP. Beware the tokencontents of all tokens will be deleted."
         print "Random User PINs and SO-PINs will be set. The SO-PIN will be stored in the Token-Database."
@@ -653,9 +660,10 @@ def main():
                 break
             tokenlabel = param.get('label', "privacyIDEAToken")
             description = param.get('description', 'eTokenNG mass enrolled')
-            tdata = initetng({ 'label': tokenlabel, 'debug' : False,
-                               'description' : description })
-            if not tdata['userpin']  or not tdata['hmac'] or not tdata['serial']:
+            tdata = initetng({'label': tokenlabel,
+                              'debug': False,
+                              'description': description})
+            if not tdata['userpin'] or not tdata['hmac'] or not tdata['serial']:
                 print "No token was added to privacyIDEA:", tdata['error']
                 sys.exit(1)
             param['serial'] = tdata['serial']
@@ -667,26 +675,28 @@ def main():
 
     elif (config.get("command") == "inittoken"):
         if etng:
-            tokenlabel = param.get('user', param.get('label', "privacyIDEAeToken"))
-            tdata = initetng({ 'label': tokenlabel, 'debug' : True })
-            if not tdata['userpin']  or not tdata['hmac'] or not tdata['serial']:
-                print "No token was added to privacyIDEA:", tdata['error']
+            tokenlabel = param.get('user',
+                                   param.get('label', "privacyIDEAeToken"))
+            tdata = initetng({'label': tokenlabel,
+                              'debug': True})
+            if not tdata['userpin'] or not tdata['hmac'] or not tdata['serial']:
+                print "No token was added to privacyIDEA: ", tdata['error']
                 sys.exit(1)
             param['serial'] = tdata['serial']
             param['otpkey'] = tdata['hmac']
             param['userpin'] = tdata['userpin']
             param['sopin'] = tdata['sopin']
-            print "FIXME: what shall we do with the eToken password and SO PIN:", tdata['userpin'], tdata['sopin']
+            print "FIXME: what shall we do with the eToken password and SO PIN: ", tdata['userpin'], tdata['sopin']
         elif config.get("pytoken"):
             if 'user' not in param:
                 print "To initialize a pyToken, please provide a username"
                 sys.exit(1)
             pyTemplate = "FAIL"
             pyTemplateList = ('pytoken.template.py',
-                    '/usr/share/pyshared/privacyideautils/pytoken.template.py',
-                    '/usr/local/lib/python2.6/dist-packages/privacyideautils/pytoken.template.py',
-                    '/usr/lib/python2.6/dist-packages/privacyideautils/pytoken.template.py',
-                )
+                              '/usr/share/pyshared/privacyideautils/pytoken.template.py',
+                              '/usr/local/lib/python2.6/dist-packages/privacyideautils/pytoken.template.py',
+                              '/usr/lib/python2.6/dist-packages/privacyideautils/pytoken.template.py',
+                              )
             for pT in pyTemplateList:
                 if os.path.isfile(pT):
                     pyTemplate = pT
@@ -711,19 +721,19 @@ def main():
         if not file:
             print "To import tokens, we need a filename!"
             sys.exit(1)
-        lotpc.importtoken ({ 'file': file })
+        lotpc.importtoken ({'file': file})
     elif (config.get("command") == "disabletoken"):
-        r1 = lotpc.disabletoken (param)
-        showresult (r1)
+        r1 = lotpc.disabletoken(param)
+        showresult(r1)
     elif (config.get("command") == "removetoken"):
-        r1 = lotpc.removetoken (param)
-        showresult (r1)
+        r1 = lotpc.removetoken(param)
+        showresult(r1)
     elif (config.get("command") == "enabletoken"):
-        r1 = lotpc.enabletoken (param)
-        showresult (r1)
+        r1 = lotpc.enabletoken(param)
+        showresult(r1)
     elif (config.get("command") == "resynctoken"):
-        r1 = lotpc.resynctoken (param)
-        showresult (r1)
+        r1 = lotpc.resynctoken(param)
+        showresult(r1)
     elif (config.get("command") == "set"):
         if 'user' not in param and 'serial' not in param:
             print "Please provide either or user or a serial to set the pin."
@@ -732,27 +742,27 @@ def main():
         showresult(r1)
     elif (config.get("command") == "getrealms"):
         r1 = lotpc.getrealms({})
-        showresult (r1)
+        showresult(r1)
     elif (config.get("command") == "setrealm"):
         if "realm" not in param or "resolver" not in param:
             print "You need to provide a realm and resolvers."
             sys.exit(1)
         param['resolvers'] = param['resolver']
         r1 = lotpc.setrealm(param)
-        showresult (r1)
+        showresult(r1)
     elif (config.get("command") == "deleterealm"):
         if "realm" not in param:
             print "You need to provide a realm."
             sys.exit(1)
         r1 = lotpc.deleterealm(param)
-        showresult (r1)
+        showresult(r1)
     elif (config.get("command") == "securitymodule"):
         r1 = {}
         if "module" in param:
             password = getpass.getpass(prompt="Please enter password for security module '%s':" % param["module"])
             print "Setting the password of your security module %s" % param['module']
-            r1 = lotpc.securitymodule(param={ "hsm_id" : param["module"],
-                                                "password" : str(password) })
+            r1 = lotpc.securitymodule(param={"hsm_id": param["module"],
+                                             "password": str(password)})
         else:
             print "This is the configuration of your active Security module:"
             print
@@ -763,10 +773,10 @@ def main():
             print "You need to provide a realm."
             sys.exit(1)
         r1 = lotpc.setdefaultrealm(param)
-        showresult (r1)
+        showresult(r1)
     elif (config.get("command") == "getresolvers"):
         r1 = lotpc.getresolvers({})
-        showresult (r1)
+        showresult(r1)
     elif (config.get("command") == "deleteresolver"):
         if "resolver" not in param:
             print param
@@ -774,7 +784,7 @@ def main():
             sys.exit(1)
         r1 = lotpc.deleteresolver(param)
     elif (config.get("command") == "setresolver"):
-        if not "rtype" in param:
+        if "rtype" not in param:
             print "your need to specify a type of the resolver."
             sys.exit(1)
         if param['rtype'] == 'LDAP':
@@ -869,4 +879,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -11,16 +11,17 @@
 #            http://www.lsexperts.de
 #            linotp@lsexperts.de
 '''
-This module is used for the communication of 
+This module is used for the communication of
 the python based management clients
 privacyidea-adm
 '''
 
-import urllib2, httplib, urllib
+import urllib2
+import httplib
+import urllib
 import re
 import random
-import sys, os
-import logging
+import sys
 import logging.handlers
 import cookielib
 import traceback
@@ -35,23 +36,24 @@ import gettext
 _ = gettext.gettext
 
 TIMEOUT = 5
+etng = False
 
 
 file_opts = ['rf_file=']
 ldap_opts = ['rl_uri=', 'rl_basedn=', 'rl_binddn=',
-    'rl_bindpw=', 'rl_timeout=', 'rl_loginattr=',
-    'rl_searchfilter=', 'rl_userfilter=',
-    'rl_attrmap=']
-ldap_opts_map = { 'rl_uri' : 'LDAPURI',
-                'rl_basedn' : 'LDAPBASE',
-                'rl_binddn' : 'BINDDN',
-                'rl_bindpw' : 'BINDPW',
-                'rl_timeout': 'TIMEOUT',
-                'rl_searchfilter' : 'LDAPSEARCHFILTER',
-                'rl_userfilter' : 'LDAPFILTER',
-                'rl_attrmap' : 'USERINFO',
-                'rl_loginattr' : 'LOGINNAMEATTRIBUTE'
-                }
+             'rl_bindpw=', 'rl_timeout=', 'rl_loginattr=',
+             'rl_searchfilter=', 'rl_userfilter=',
+             'rl_attrmap=']
+ldap_opts_map = {'rl_uri': 'LDAPURI',
+                 'rl_basedn': 'LDAPBASE',
+                 'rl_binddn': 'BINDDN',
+                 'rl_bindpw': 'BINDPW',
+                 'rl_timeout': 'TIMEOUT',
+                 'rl_searchfilter': 'LDAPSEARCHFILTER',
+                 'rl_userfilter': 'LDAPFILTER',
+                 'rl_attrmap': 'USERINFO',
+                 'rl_loginattr': 'LOGINNAMEATTRIBUTE'
+                 }
 
 
 def showresult(rv):
@@ -59,26 +61,33 @@ def showresult(rv):
     print pp.pformat(rv['result'])
 
 
+def initetng():
+    pass
+
+
 class privacyIDEAClientError(Exception):
     '''
     This class is used to throw client exceptions.
     '''
-    def __init__(self, id=10, description="privacyIDEAClientError"):
-        self.id = id
+    def __init__(self, eid=10, description="privacyIDEAClientError"):
+        self.id = eid
         self.description = description
+        
     def getId(self):
         return self.id
+    
     def getDescription(self):
         return self.description
+    
     def __str__(self):
-        ## here we lookup the error id - to translate
+        # here we lookup the error id - to translate
         return repr("ERR" + str(self.id) + ": " + self.description)
-
 
 
 class pyToken:
     '''
-    This class is used to generate a pyToken, which is a python based soft-token.
+    This class is used to generate a pyToken,
+    which is a python based soft-token.
     '''
     def __init__(self, keylen=256, template="pytoken.template.py"):
         self.keylen = keylen
@@ -96,7 +105,7 @@ class pyToken:
 
     def createToken(self, user):
         # read replace and dump
-        f = open (self.template)
+        f = open(self.template)
         tfile = f.readlines()
         f.close
         usertoken = ""
@@ -107,6 +116,7 @@ class pyToken:
                 line = p.sub(self.hmackey, line)
             usertoken = usertoken + line
         return usertoken
+
 
 class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
     '''
@@ -128,29 +138,34 @@ class HTTPSClientAuthHandler(urllib2.HTTPSHandler):
         return self.do_open(self.getConnection, req)
 
     def getConnection(self, host, timeout=300):
-        return httplib.HTTPSConnection(host, key_file=self.key, cert_file=self.cert)
+        return httplib.HTTPSConnection(host,
+                                       key_file=self.key,
+                                       cert_file=self.cert)
+
 
 class privacyideaclient:
     '''
-    class privacyideaclient: This class is created to hold a connection to the privacyIDEA server
+    This class is created to hold a connection to the privacyIDEA server
     '''
     def __init__(self, protocol, url, admin=None, adminpw=None,
-                cert=None, key=None, proxy=None,
-                authtype="Digest"):
+                 cert=None, key=None, proxy=None,
+                 authtype="Digest"):
         '''
         arguments:
             The class is created with the parameters
                 protocol:   either http or https
-                url:        the url of the privacyIDEA server. It consists of 
+                url:        the url of the privacyIDEA server. It consists of
                             the hostname and the port like:
                             localhost:443
             Optional parameters:
-                admin:      If the privacyIDEA server is configured to use digest auth,
-                adminpw:    these are the credentials to authenticate to the 
-                            privacyIDEA server
-                cert:       If the privacyIDEA server is configured to use client
-                key:        certificate authentication, these are the filenames
-                            of the files holding the certificate and the key.
+                admin/adminpw: If the privacyIDEA server is configured to
+                               use digest auth,
+                               these are the credentials to authenticate to the
+                               privacyIDEA server
+                cert/key:      If the privacyIDEA server is configured to use
+                               client certificate authentication, these are the
+                               filenames of the files holding the certificate
+                               and the key.
                  
         description:
             At the moment you can either authenticate via digest auth or
@@ -183,8 +198,11 @@ class privacyideaclient:
             if hasattr(self, "handler"):
                 self.log.removeHandler(self.handler)
             self.handler = logging.handlers.RotatingFileHandler(
-                self.LOG_FILENAME, maxBytes=self.LOG_SIZE, backupCount=self.LOG_COUNT)
-            self.formatter = logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s]:%(message)s")
+                self.LOG_FILENAME,
+                maxBytes=self.LOG_SIZE,
+                backupCount=self.LOG_COUNT)
+            self.formatter = logging.Formatter("[%(asctime)s][%(name)s]"
+                                               "[%(levelname)s]:%(message)s")
             self.handler.setFormatter(self.formatter)
             self.log.addHandler(self.handler)
             self.log.debug("Logging initialized")
@@ -193,19 +211,18 @@ class privacyideaclient:
             if hasattr(self, "handler"):
                 self.log.removeHandler(self.handler)
 
-
     def setcredentials(self, protocol, url, admin=None, adminpw=None,
-            cert=None, key=None, proxy=None,
-            authtype="Digest"):
+                       cert=None, key=None, proxy=None,
+                       authtype="Digest"):
         '''
         arguments:
             The same arguments as when initializing the instance.
             
         description:
-            This method can be used, when i.e. the authentication credentials need
-            to be changed. If the admin tried to authenticate with username /password
-            and he mistyped the password, this function can be used, to reset the 
-            credentials.
+            This method can be used, when i.e. the authentication credentials
+            need to be changed. If the admin tried to authenticate with
+            username /password and he mistyped the password, this function can
+            be used, to reset the credentials.
         '''
         self.protocol = protocol
         self.url = url
@@ -222,12 +239,11 @@ class privacyideaclient:
         if self.logging:
             self.log.info("[setcredentials]: Credentials set successfully.")
 
-
     def connect(self, path, param, data={}, json_format=True):
         '''
         arguments:
             path:
-                The path argument takes the controller path/method. This can be 
+                The path argument takes the controller path/method. This can be
                 /admin/show
                 /admin/init
                 /admin/...
@@ -236,12 +252,14 @@ class privacyideaclient:
                 /system/...
                 
             param:
-                The param is a dictionary of the parameters, that need to be 
-                passed to the privacyIDEA server controller for the specified method.
+                The param is a dictionary of the parameters, that need to be
+                passed to the privacyIDEA server controller for the specified
+                method.
 
             data:
                 The data, that would be passed in a POST request.
-                As soon as the parameter data is provided, we'll do a POST request.
+                As soon as the parameter data is provided,
+                we'll do a POST request.
                 
             json_format:
                 The response of the API request is a json format
@@ -264,47 +282,13 @@ class privacyideaclient:
         if self.logging:
             self.log.debug("[connect]: data=" + d)
             self.log.debug("[connect]: type of data: %s" % type(d))
-            self.log.info ("[connect]: path=" + path)
+            self.log.info("[connect]: path=" + path)
             self.log.debug("[connect]: param=" + p)
-
-#        try:
-#            auth_handler = None
-#            if self.admin:
-#                #########################################################
-#                #
-#                # PASSWORD AUTH
-#                #
-#                # we got a username, so we will do digest auth
-#                if not self.adminpw:
-#                    raise privacyIDEAClientError(1004, _("When specifying an admin user to authenticate you also need to pass a password."))
-#                pw_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
-#                pw_manager.add_password(None, uri=self.protocol + '://' + self.url, user=self.admin, passwd=self.adminpw)#
-#
-#                if "Digest" == self.authtype:
-#                    # Digest Auth
-#                    auth_handler = urllib2.HTTPDigestAuthHandler(pw_manager)
-#                else:
-#                    # Basic Auth
-#                    auth_handler = urllib2.HTTPBasicAuthHandler(pw_manager)
-#            elif (self.cert and (self.protocol == "https")):
-#                #########################################################
-#                # CLIENT CERT AUTH
-#                # We got a certificate, so we will do client cert auth
-#                auth_handler = HTTPSClientAuthHandler(self.key, self.cert)
-#        except Exception as  e:
-#            if self.logging:
-#                self.log.error("[connect]: Error creating auth handler: %s" % str(e))
-#            raise privacyIDEAClientError(1006, _("Error creating auth handler: %s" % str(e)))
-
-#       if None == auth_handler:
-#            if self.logging:
-#                self.log.error("[connect] No authentication method found!")
-#            raise privacyIDEAClientError(1005, "You either need to login or provide a valid client certificate.")
 
         try:
             # Proxy handler:
             proxy_handler = urllib2.ProxyHandler({})
-            proxy_auth_handler = urllib2.ProxyBasicAuthHandler()
+            # proxy_auth_handler = urllib2.ProxyBasicAuthHandler()
             if self.proxy:
                 proxy_handler = urllib2.ProxyHandler({self.protocol: self.protocol + '://' + self.proxy + '/'})
                 # TODO: Proxy Authentication
@@ -317,7 +301,7 @@ class privacyideaclient:
 
             f = urllib2.urlopen(urllib2.Request(self.protocol + '://' + self.url + path + '?session=' + self.session + '&' + p, d))
 
-        except Exception as  e:
+        except Exception as e:
             if self.logging:
                 self.log.error("[connect]: Error connecting to privacyIDEA service: %s" % str(e))
                 self.log.error("[connect]: %s" % traceback.format_exc())
@@ -326,7 +310,7 @@ class privacyideaclient:
 
         # Now evaluate the response.
         if not json_format:
-            rv = f.read() 
+            rv = f.read()
         else:
             status = False
             try:
@@ -343,47 +327,24 @@ class privacyideaclient:
                     self.log.error("[connect]: Internal JSON error. Could not interpret the privacyIDEA server response: %s" % f)
                 raise privacyIDEAClientError(1003, _("Internal JSON error. Could not interpret the privacyIDEA server response:  %s") % f)
     
-            if status == False:
+            if status is False:
                 if self.logging:
                     self.log.error("[connect]: Your request to the privacyIDEA server was invalid: " + rv['result']['error']['message'])
                 raise privacyIDEAClientError(rv['result']['error']['code'], _("Your request to the privacyIDEA server was invalid: ") + rv['result']['error']['message'])
 
         return rv
 
-
-    def command(self, command, param):
-        '''
-        This is just a mapper method to map a command to a path, i.e
-        a pylons controller/method of the privacyIDEA server
-        
-        arguments:
-            command: can be something like:
-                    userlist
-                    inittoken
-                    listtoken
-                    assigntoken
-                    unassigntoken
-                    resetfailcounter
-                    resynctoken
-                    set
-                    setscpin
-                    setmaxfail
-                    
-                    
-        '''
-        #return self.connect(self.commandmap[command], param)
-
     def login(self):
-        # we are doin a post request
-        d = urllib.urlencode({ "login": self.admin,
-                               "realm": "",
-                               "password": self.adminpw})
+        # we are doing a post request
+        d = urllib.urlencode({"login": self.admin,
+                              "realm": "",
+                              "password": self.adminpw})
         path = "/account/dologin"
 
         try:
             # Proxy handler:
             proxy_handler = urllib2.ProxyHandler({})
-            proxy_auth_handler = urllib2.ProxyBasicAuthHandler()
+            # proxy_auth_handler = urllib2.ProxyBasicAuthHandler()
             if self.proxy:
                 proxy_handler = urllib2.ProxyHandler({self.protocol: self.protocol + '://' + self.proxy + '/'})
                 # TODO: Proxy Authentication
@@ -395,7 +356,7 @@ class privacyideaclient:
             urllib2.install_opener(opener)
             f = urllib2.urlopen(urllib2.Request(self.protocol + '://' + self.url + path, d))
 
-        except Exception as  e:
+        except Exception as e:
             if self.logging:
                 self.log.error("[connect]: Error connecting to privacyIDEA service: %s" % str(e))
                 self.log.error("[connect]: %s" % traceback.format_exc())
@@ -404,14 +365,12 @@ class privacyideaclient:
 
         rv = f.read()
         
-        
         for cookie in self.cookie_jar:
             if cookie.name == "privacyidea_session":
                 self.session = cookie.value.strip('"')
         
         return rv
         
-
     def userlist(self, param):
         return self.connect('/admin/userlist', param)
 
@@ -433,7 +392,7 @@ class privacyideaclient:
     def assigntoken(self, param):
         return self.connect('/admin/assign', param)
 
-    def unassigntoken (self, param):
+    def unassigntoken(self, param):
         return self.connect('/admin/unassign', param)
 
     def resetfailcounter(self, param):
@@ -443,7 +402,9 @@ class privacyideaclient:
         return self.connect('/admin/resync', param)
 
     def tokenrealm(self, serial, realms):
-        return self.connect('/admin/tokenrealm', { 'serial':serial, 'realms':realms})
+        return self.connect('/admin/tokenrealm',
+                            {'serial': serial,
+                             'realms': realms})
 
     def set(self, param):
         '''
@@ -469,7 +430,7 @@ class privacyideaclient:
         param['enable'] = 'True'
         return self.connect('/admin/enable', param)
 
-    def removetoken (self, param):
+    def removetoken(self, param):
         return self.connect('/admin/remove', param)
 
     def readserverconfig(self, param):
@@ -497,18 +458,18 @@ class privacyideaclient:
         return self.connect('/system/delConfig', param)
 
     def setresolver(self, param):
-        if (not 'resolver' in param):
+        if 'resolver' not in param:
             raise privacyIDEAClientError(1201, _("When setting a resolver, you need to specify 'resolver'."))
 
         if param['rtype'] == 'FILE':
-            if (not 'rf_file' in param):
+            if 'rf_file' not in param:
                 raise privacyIDEAClientError(1201, _("When setting a flat file resolver, you need to specify 'rf_file'."))
             r1 = self.writeserverconfig({ 'passwdresolver.fileName.' + param['resolver'] : param['rf_file'] })
             return r1
 
         elif param['rtype'] == 'LDAP':
             for k, v in ldap_opts_map.items():
-                if not k in param:
+                if k not in param:
                     raise privacyIDEAClientError(1201, _("When setting an ldap resolver, you need to specify '%s'.") % k)
                 r1 = self.writeserverconfig({ 'ldapresolver.' + v + '.' + param['resolver']: param[ k ] })
             return r1
@@ -519,14 +480,15 @@ class privacyideaclient:
 
     def deleteresolver(self, param):
         r1 = self.readserverconfig({})
-        for (k, v) in r1['result']['value'].items():
+        for (k, _v) in r1['result']['value'].items():
             resolver = k.split(".")
             if len(resolver) == 3:
-                if resolver[0] in ("passwdresolver", "ldapresolver", "sqlresolver"):
+                if resolver[0] in ("passwdresolver",
+                                   "ldapresolver",
+                                   "sqlresolver"):
                     if resolver[2] == param['resolver']:
                         print "deleting config key %s." % k
-                        self.deleteconfig({'key':k })
-
+                        self.deleteconfig({'key': k})
 
     def getresolvers(self, param):
         r1 = self.readserverconfig(param)
@@ -535,20 +497,21 @@ class privacyideaclient:
         for (k, v) in r1['result']['value'].items():
             resolver = k.split(".")
             if len(resolver) == 3:
-                if resolver[0]in ("passwdresolver", "ldapresolver", "sqlresolver"):
-                    if newResolver.has_key(resolver[2]) == False:
+                if resolver[0]in ("passwdresolver",
+                                  "ldapresolver",
+                                  "sqlresolver"):
+                    if resolver[2] not in newResolver:
                         newResolver[resolver[2]] = {}
                     newResolver[resolver[2]]['type'] = resolver[0]
                     newResolver[resolver[2]][resolver[1]] = v
-        r2 = { 'result' : { 'value' : newResolver } }
+        r2 = {'result': {'value': newResolver}}
         return r2
-
 
     def importtoken(self, param):
         if not param['file']:
             print "Please specify a filename to import the token from"
             return False
-        f = open (param['file'])
+        f = open(param['file'])
         tokenfile = f.readlines()
         f.close
         tokenserial = ""
@@ -561,35 +524,39 @@ class privacyideaclient:
                 token_count = token_count + 1
         for line in tokenfile:
             # Format like
-            #<Token serial="F800574">
-            #<Seed>F71E5AC721B7353735F52494E61B1A62538A0238</Seed>
+            # <Token serial="F800574">
+            # <Seed>F71E5AC721B7353735F52494E61B1A62538A0238</Seed>
             mt = re.search('<Token serial=\"(.*)\">', line)
             if mt:
                 if tokenseed:
-                    print "Error: Got a seed (" + tokenseed + ")without a serial!"
+                    print("Error: Got a seed (%r)"
+                          "without a serial!" % tokenseed)
                 else:
                     tokenserial = mt.group(1)
                     tokens = tokens + 1
-                    print "Importing token", tokens, "/", token_count, "with serial", tokenserial
+                    print("Importing token %r/%r, serial %r" % (tokens,
+                                                                token_count,
+                                                                tokenserial
+                                                                ))
             else:
                 ms = re.search('<Seed>(.*)</Seed>', line)
                 if ms:
                     tokenseed = ms.group(1)
                     if tokenserial:
                         ret = self.inittoken({ 'serial':tokenserial, 'otpkey':tokenseed, 'description':"Safeword", 'user':'', 'pin':''})
-                        if ret['result']['status'] == False:
+                        if ret['result']['status'] is False:
                             print ret['result']['error']['message']
                         tokenseed = ""
                         tokenserial = ""
                     else:
-                        print "Error: Got a seed (" + tokenseed + ") without a serial!"
+                        print("Error: Got a seed (%r) without a serial!" % tokenseed)
         print "%i tokens imported." % tokens
         return True
 
 
 def dumpresult(status, data, tabformat):
     '''
-    This function is used to print the Tokenlist in a nice viewable 
+    This function is used to print the Tokenlist in a nice viewable
     ascii table.
     '''
     tabsize = tabformat['tabsize']
@@ -599,7 +566,7 @@ def dumpresult(status, data, tabformat):
     tabhead = tabformat['tabhead']
     tabentry = tabformat['tabentry']
 
-    #if not result['status']:
+    # if not result['status']:
     if not status:
         print "The return status is false"
     else:
@@ -621,20 +588,20 @@ def dumpresult(status, data, tabformat):
             for i in range(0, len(head)):
                 tabstr.append("%10s")
 
-        #value = result['value']
-        #data = value['data']
+        # value = result['value']
+        # data = value['data']
 
         i = 0
         for t in tabhead:
-            print tabstr[i] % str(t) [:tabsize[i]], tabdelim,
+            print tabstr[i] % str(t)[:tabsize[i]], tabdelim,
             i = i + 1
         print
 
         for token in data:
             i = 0
             for t in tabentry:
-                #print tabstr[i] % str(token.get(t)).endcode('utf-8') [:tabsize[i]], tabdelim,
-                #text=str(token.get(t)).encode('utf-8')
+                # print tabstr[i] % str(token.get(t)).endcode('utf-8') [:tabsize[i]], tabdelim,
+                # text=str(token.get(t)).encode('utf-8')
                 text = token.get(t)
                 if not type(token.get(t)) == unicode:
                     text = str(token.get(t))
@@ -644,6 +611,6 @@ def dumpresult(status, data, tabformat):
                     r = text.split('.')
                     if len(r) == 4:
                         text = r[3]
-                print tabstr[i] % text [:tabsize[i]], tabdelim,
+                print tabstr[i] % text[:tabsize[i]], tabdelim,
                 i = i + 1
             print
