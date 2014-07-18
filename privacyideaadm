@@ -19,7 +19,7 @@
 
 '''
 
-VERSION = '1.2dev0'
+VERSION = '1.2.1'
 
 import subprocess
 import datetime
