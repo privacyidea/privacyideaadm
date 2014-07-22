@@ -24,11 +24,12 @@ setup(
     author_email='cornelius@privacyidea.org',
     url='http://www.privacyidea.org',
     packages=['privacyideautils'],
-    scripts=['privacyideaadm'],
+    scripts=['privacyideaadm',
+	     'privacyidea-luks-assign'],
     install_requires=[
         "usb",
 	],
-     data_files=[('share/man/man1', ["privacyideaadm.1"])],
+    data_files=[('share/man/man1', ["privacyideaadm.1"])],
     license='AGPLv3',
     long_description=get_file_contents('DESCRIPTION')
 )

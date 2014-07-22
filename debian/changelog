@@ -1,0 +1,6 @@
+privacyideaadm (1.2.1-1) trusty; urgency=low
+
+  * initial deb package
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Wed, 23 Jul 2014 00:06:00 +0200
+
