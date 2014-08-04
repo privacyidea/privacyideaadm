@@ -19,7 +19,7 @@
 
 '''
 
-VERSION = '1.2.1'
+VERSION = '1.2.2'
 
 import subprocess
 import datetime
@@ -60,6 +60,7 @@ COMMANDS = ['listtoken', 'inittoken', 'assigntoken',
             'securitymodule',
             'createmachine', 'showmachine', 'deletemachine',
             'machine_addtoken', 'machine_showtoken', 'machine_deltoken',
+            'machine_addoption', 'machine_deloption',
             'showtokenapps'
             ]
 
@@ -85,7 +86,8 @@ def usage():
   --command/-C :
     listtoken:    [--user | --serial ] [--csv]
     listuser:
-    inittoken:    --user= --serial= --description= --pin= --otpkey= --etng --pytoken --type=<type>
+    inittoken:    --user= --serial= --description= --pin= --otpkey=
+                          --etng --pytoken --type=<type>
     inittoken:    --user= --serial= --description= --pin= --otpkeyc=
     yubikey_mass_enroll
         --yubiprefix=<string>
@@ -93,7 +95,8 @@ def usage():
         --yubiprefixserial          : use the serial of the yubikey as prefix
         --yubimode=<OATH or YUBICO or STATIC>
         --yubislot=<1 or 2>
-        --yubiCR                    : programm the Yubikey in challenge Response mode (TOTP, 60seconds)
+        --yubiCR                    : programm the Yubikey in challenge
+                                      Response mode (TOTP, 60seconds)
     etokenng_mass_enroll [--label=TokenName]
     assigntoken:    --user --serial
     unassigntoken:  --serial
@@ -116,11 +119,18 @@ def usage():
     machine_addtoken:   --name  --serial  --app
     machine_showtoken:  [--name] [--serial] [--app]
     machine_deltoken:   --name  --serial  --app
+    
+    machine_addoption:  --name  --serial  --app   --option
+    machine_deloption:  --name  --serial  --app   --option
+                        Note: You can specify several options like:
+                        --option=slot=7 --option=partition=/dev/sda3
 
     Security Modules
     ----------------
-    securitymodule:         get the status of the security module or set the password for the module
-                            To set the password, you must specify the following parameter:
+    securitymodule:    get the status of the security module or set the
+                       password for the module.
+                       To set the password, you must specify the following
+                       parameter:
                                    --module=<modulename>
 
     Server configuration
@@ -181,6 +191,32 @@ def usage():
     --rl_attrmap      Resolver LDAP: the attribute mapping. Something like:
                                      { "username": "uid", "phone" : "telephoneNumber", "groups" : "o", "mobile" : "mobile", "email" : "mail", "surname" : "sn", "givenname" : "givenName" }
 """
+
+
+def options_to_dict(Option):
+    '''
+    This takes an array Option consisting of entries like
+    slot=7, partition=dev3
+    and converts it to a dictionary:
+    { "option_slot": "7",
+      "option_partition": "dev3" }
+      
+    :param Option: array of options
+    :type Option: array
+    :return: dictionary
+    '''
+    options = {}
+    for option in Option:
+        opt = option.split("=")
+        if len(opt) == 2:
+            # There was exactly one equal sign and we have a key and a value
+            value = opt[1]
+            if opt[0].startswith("option_"):
+                key = opt[0]
+            else:
+                key = "option_" + opt[0]
+            options[key] = value
+    return options
 
 
 def yubi_mass_enroll(lotpc,
@@ -381,6 +417,7 @@ def main():
               }
     config_file = None
     _ask_password = None
+    Option = []
 
     try:
         opts, _args = getopt(sys.argv[1:],
@@ -397,7 +434,7 @@ def main():
                               'yubiprefixserial', 'yubiCR', 'password=',
                               'csv', 'export_fields=', 'automate=', 'realm=',
                               'name=', 'ip=', 'desc=', 'decommission=', 'app=',
-                              'challenge=',
+                              'challenge=', 'option=',
                               'challenge_hex='] + file_opts + ldap_opts)
 
     except GetoptError:
@@ -530,6 +567,8 @@ def main():
             param["challenge"] = arg
         elif opt in ('--challenge_hex='):
             param["challenge_hex"] = arg
+        elif opt in ('--option='):
+            Option.append(arg)
 
         for l_opt in ldap_opts:
             o = l_opt.split('=')
@@ -537,7 +576,8 @@ def main():
                 param[o[0]] = arg
 
     if _ask_password:
-        config["password"] = getpass.getpass(prompt="Please enter password for '%s':" % config["admin"])
+        config["password"] = getpass.getpass(prompt="Please enter password for"
+                                                    " '%s':" % config["admin"])
 
     if config_file:
         config_from_file = read_config(config_file)
@@ -851,12 +891,19 @@ def main():
         else:
             print "You need to specify a --name!"
     elif (config.get("command") == "machine_addtoken"):
+        m_params = {"name": param.get("name"),
+                    "serial": param.get("serial"),
+                    "application": param.get("app")}
         ret = lotpc.connect("/machine/addtoken",
                             {},
-                            {"name": param.get("name"),
-                             "serial": param.get("serial"),
-                             "application": param.get("app")})
+                            m_params)
         showresult(ret)
+        if len(Option) > 0:
+            options = options_to_dict(Option)
+            ret = lotpc.connect("/machine/addoption",
+                                {},
+                                dict(m_params.items() + options.items()))
+            showresult(ret)
     elif (config.get("command") == "machine_showtoken"):
         p = {}
         for key in ["name", "serial", "app"]:
@@ -872,6 +919,27 @@ def main():
                              "serial": param.get("serial"),
                              "application": param.get("app")})
         showresult(ret)
+    elif (config.get("command") == "machine_addoption"):
+        m_params = {"name": param.get("name"),
+                    "serial": param.get("serial"),
+                    "application": param.get("app")}
+        if len(Option) > 0:
+            options = options_to_dict(Option)
+            ret = lotpc.connect("/machine/addoption",
+                                {},
+                                dict(m_params.items() + options.items()))
+            showresult(ret)
+    elif (config.get("command") == "machine_deloption"):
+        m_params = {"name": param.get("name"),
+                    "serial": param.get("serial"),
+                    "application": param.get("app")}
+        if len(Option) > 0:
+            options = options_to_dict(Option)
+            for key in options.keys():
+                ret = lotpc.connect("/machine/deloption",
+                                    {},
+                                    dict({"key": key}.items() + m_params.items()))
+                showresult(ret)
     else:
 
         print "Nothing to do and nothing done."
