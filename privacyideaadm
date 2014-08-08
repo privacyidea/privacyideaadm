@@ -61,7 +61,7 @@ COMMANDS = ['listtoken', 'inittoken', 'assigntoken',
             'createmachine', 'showmachine', 'deletemachine',
             'machine_addtoken', 'machine_showtoken', 'machine_deltoken',
             'machine_addoption', 'machine_deloption',
-            'showtokenapps'
+            'gettokenapps'
             ]
 
 
@@ -112,7 +112,7 @@ def usage():
     createmachine:   --name [--ip]  [--desc]  [--decommission]
     deletemachine:   --name
     showmachine:     [--name]
-    showtokenapps:   [--name] [--app] [--serial] [--challenge|--challenge_hex]
+    gettokenapps:   [--name] [--app] [--serial] [--challenge|--challenge_hex]
     
     The token-machine-binding is identified by the tuple (name, serial, app)
     
@@ -866,7 +866,7 @@ def main():
                             {},
                             {"name": param.get("name")} if param.get("name") else {})
         showresult(ret)
-    elif (config.get("command") == "showtokenapps"):
+    elif (config.get("command") == "gettokenapps"):
         tokenapps_param = {}
         if param.get("name"):
             tokenapps_param["name"] = param.get("name")

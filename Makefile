@@ -4,7 +4,7 @@ info:
 	@echo "ppa-dev          -- upload to ppa development repo"
 	@echo "ppa		-- upload to ppa release repo"
 
-VERSION=1.2.2
+VERSION=1.3~dev0
 
 pypi:
 	python setup.py sdist upload

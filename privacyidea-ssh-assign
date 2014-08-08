@@ -1,0 +1,201 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  privacyIDEA
+#  (c) 2014 Cornelius Kölbel, cornelius@privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''
+This tool is used to fetch the SSH app information from 
+the privacycIDEA server and push the information via
+salt to the clients.
+'''
+
+VERSION = '1.3'
+DEBUG = False
+
+from getopt import getopt, GetoptError
+import getpass
+from privacyideautils.clientutils import *
+try:
+    import salt.client
+except ImportError as e:
+    print e
+    print("You need to install salt-common or run this program on"
+          "the salt master.")
+    
+SALT_CONFIG = "/etc/salt/master"
+USER_KEY = "option_user"
+DEFAULT_USER = "root"
+
+
+def help():
+    print "%s --url=<url> --admin=<adminusername>" % sys.argv[0]
+    print """ 
+    --url/-U        : The base url of the privacyIDEA server. Something like
+                      http://localhost:5000 or https://privacyidea:443
+    --admin=/-a     : administrator name
+    --password=/-p  : the password of the administrator
+    --passwordfile= : a file, that holds the password of the administrator
+    --purgekeys     : If this bool parameter is given, existing keys will
+                      be purged, before the new keys from privacyIDEA will
+                      be pushed to the clients.
+ """
+    sys.exit(2)
+
+
+def set_ssh(machine,
+            purgekeys=False):
+    '''
+    :param machine: dictionary with keys like 
+            ip,
+            is_active,
+            options,
+            auth_item,
+            machine_name
+           
+    
+            import salt.client
+            local = salt.client.LocalClient(c_path='/etc/salt/master') 
+            local.cmd('salt-minion',
+                      'ssh.rm_auth_key',
+                      kwarg={"user": "cornelius", "key": "aaa1234"})
+    '''
+    # We assume, we run on the master
+    salt_client = salt.client.LocalClient(c_path=SALT_CONFIG)
+    
+    minion = machine.get("machinename")
+    user = machine.get("options", {}).get(USER_KEY, DEFAULT_USER)
+    authitem = machine.get("auth_item")
+    ssh_key = authitem.get("sshkey")
+    
+    key_elements = key.split()
+    if len(key_elements) == 1:
+        client_key = key
+        client_comment = "unknown key"
+        client_enc = "ssh-rsa"
+    elif len(key_elements) == 2:
+        client_key = key_elements[1]
+        client_enc = key_elements[0]
+        client_comment = "unknown key"
+    elif len(key_elements) == 3:
+        client_key = key_elements[1]
+        client_enc = key_elements[0]
+        client_comment = key_elements[2]
+    else:
+        print("Could not handle the key for minion %s."
+              " Could not split key" % minion)
+        return False
+    params = {"user": user,
+              "key": client_key,
+              "config": client_comment,
+              "enc" : client_enc}
+
+    if machine.get("is_active", True) is False:
+        # remove the key
+        res = salt_client.cmd(minion,
+                              "ssh.rm_auth_key", 
+                              kwarg=params)
+    else:
+        # add the key  
+        res = salt_client.cmd(minion,
+                              "ssh.set_auth_key", 
+                              kwarg=params)
+
+##### main
+
+def main():
+    try:
+        opts, _args = getopt(sys.argv[1:],
+                             "hU:a:p:",
+                             ["help",
+                              "url=",
+                              "admin=",
+                              "password=",
+                              "passwordfile=",
+                              "purgekeys"])
+
+    except GetoptError:
+        print "Unknown parameter:"
+        help()
+
+    proto = None
+    host = None
+    admin = None
+    password = None
+    purgekeys = False
+    
+    for opt, arg in opts:      
+        if opt in ('-h', '--help'):
+            help()
+            sys.exit(0)
+        elif opt in ('-U', '--url'):
+            if arg.startswith('https://'):
+                proto = "https"
+                host = arg[8:]
+            elif arg.startswith('http://'):
+                proto = "http"
+                host = arg[7:]
+            else:
+                print "The URL needs to start with http or https [" + arg + "]"
+            url = arg 
+        elif opt in ('-a', '--admin'):
+            admin = arg
+        elif opt in ('-p', '--password'):
+            password = arg
+        elif opt in ('--passwordfile'): 
+            f = open(arg, 'r')
+            # read the password from the file and strip blanks and new lines.
+            password = f.read().strip().strip('\n')
+            f.close()
+        elif opt in ('--purgekeys'):
+            purgekeys = True
+            
+    if host is None or proto is None or admin is None:
+        help()
+        
+    if password is None:
+        password = getpass.getpass("Password for %r:" % admin)
+
+    lotpc = privacyideaclient(proto,
+                              host,
+                              admin=admin,
+                              adminpw=password)
+ 
+    params = {"application": "ssh"}   
+    ret = lotpc.connect("/machine/gettokenapps", {}, params)
+    result = ret.get("result")
+    
+    if result.get("status"):
+        total = result.get("value").get("total")
+        print "Found %i keys." % total 
+        machines = result.get("value").get("machines")
+        for machine_id in machines.keys():
+            set_ssh(machines[machine_id],
+                    purgekeys=purgekeys)
+    else:
+        print "An error occurred!"
+        print result
+
+
+if __name__ == '__main__':
+    if DEBUG:
+        main()
+    else:
+        try:
+            main()
+        except Exception as ex:
+            print "Error: %s" % ex
+            sys.exit(5)

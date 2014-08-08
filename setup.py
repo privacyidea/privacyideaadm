@@ -6,6 +6,7 @@ import sys
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
 
+
 def get_file_contents(file_path):
     """Get the context of the file using full path name."""
     content = ""
@@ -16,20 +17,19 @@ def get_file_contents(file_path):
         print >> sys.stderr, "### could not open file %r" % file_path
     return content
 
-setup(
-    name='privacyideaadm',
-    version='1.2.2',
-    description='privacyIDEA admin Client',
-    author='Cornelius Kölbel',
-    author_email='cornelius@privacyidea.org',
-    url='http://www.privacyidea.org',
-    packages=['privacyideautils'],
-    scripts=['privacyideaadm',
-	     'privacyidea-luks-assign'],
-    install_requires=[
-        "usb",
-	],
-    data_files=[('share/man/man1', ["privacyideaadm.1"])],
-    license='AGPLv3',
-    long_description=get_file_contents('DESCRIPTION')
-)
+
+setup(name='privacyideaadm',
+      version='1.3dev0',
+      description='privacyIDEA admin Client',
+      author='Cornelius Kölbel',
+      author_email='cornelius@privacyidea.org',
+      url='http://www.privacyidea.org',
+      packages=['privacyideautils'],
+      scripts=['privacyideaadm',
+               'privacyidea-luks-assign',
+               'privacyidea-ssh-assign'],
+      install_requires=['usb'],
+      data_files=[('share/man/man1', ["privacyideaadm.1"])],
+      license='AGPLv3',
+      long_description=get_file_contents('DESCRIPTION')
+      )
