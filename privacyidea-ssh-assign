@@ -20,7 +20,7 @@
 '''
 This tool is used to fetch the SSH app information from 
 the privacycIDEA server and push the information via
-salt to the clients.
+salt to the clients. 
 '''
 
 VERSION = '1.3'
@@ -81,7 +81,9 @@ def set_ssh(machine,
     authitem = machine.get("auth_item")
     ssh_key = authitem.get("sshkey")
     
-    key_elements = key.split()
+    print("processing minion %s" % minion)
+    
+    key_elements = ssh_key.split()
     if len(key_elements) == 1:
         client_key = key
         client_comment = "unknown key"
@@ -99,20 +101,25 @@ def set_ssh(machine,
               " Could not split key" % minion)
         return False
     params = {"user": user,
-              "key": client_key,
-              "config": client_comment,
-              "enc" : client_enc}
+              "key": client_key}
 
     if machine.get("is_active", True) is False:
         # remove the key
+        print(" * Remove the key %s, as the token is inactive!" % client_comment)
         res = salt_client.cmd(minion,
                               "ssh.rm_auth_key", 
                               kwarg=params)
+        print res
     else:
         # add the key  
+        print(" * Adding key %s to user %s" % (client_comment,
+                                            user))
+        params["comment"] =  client_comment
+        params["enc"] = client_enc
         res = salt_client.cmd(minion,
                               "ssh.set_auth_key", 
                               kwarg=params)
+        print res
 
 ##### main
 
