@@ -56,6 +56,41 @@ def help():
     sys.exit(2)
 
 
+def get_machine_user_dict(machines):
+    '''
+    returns a dictionary with machines as keys and a list of users as values. 
+    '''
+    machine_user = {}
+    for machine_id in machines.keys():
+        machine = machines[machine_id]
+        machinename = machine.get("machinename")
+        if machinename:
+            user = machine.get("options", {}).get(USER_KEY, DEFAULT_USER)
+            if machinename not in machine_user.keys():
+                # The machine does not exist, yet                
+                machine_user[machinename] = set()
+            machine_user[machinename].add(user)
+    return machine_user
+
+def ssh_purge_keys(minion, users):
+    '''
+    Purge the SSH keys from all users on the minion
+    '''
+    salt_client = salt.client.LocalClient(c_path=SALT_CONFIG)
+    print "Purge keys on minion %s" % minion
+    for user in users:
+        print " * for user %s" % user
+        res = salt_client.cmd(minion,
+                              "ssh.auth_keys",
+                              kwarg={"user": user})
+        for key in res.get(minion).keys():
+            res = salt_client.cmd(minion,
+                                  "ssh.rm_auth_key", 
+                                  kwarg={"user": user,
+                                         "key": key})
+            print " * %s" % res
+    
+
 def set_ssh(machine,
             purgekeys=False):
     '''
@@ -81,6 +116,7 @@ def set_ssh(machine,
     authitem = machine.get("auth_item")
     ssh_key = authitem.get("sshkey")
     
+    print("===============================================")
     print("processing minion %s" % minion)
     
     key_elements = ssh_key.split()
@@ -109,7 +145,7 @@ def set_ssh(machine,
         res = salt_client.cmd(minion,
                               "ssh.rm_auth_key", 
                               kwarg=params)
-        print res
+        print " * %s" % res
     else:
         # add the key  
         print(" * Adding key %s to user %s" % (client_comment,
@@ -119,7 +155,7 @@ def set_ssh(machine,
         res = salt_client.cmd(minion,
                               "ssh.set_auth_key", 
                               kwarg=params)
-        print res
+        print " * %s" % res
 
 ##### main
 
@@ -189,6 +225,18 @@ def main():
         total = result.get("value").get("total")
         print "Found %i keys." % total 
         machines = result.get("value").get("machines")
+        
+        '''
+        TODO: we should work per machine. 
+        1st delete the keys of the machine and 
+        2nd then push new new ones..
+        '''
+        if purgekeys:
+            machine_user_dict = get_machine_user_dict(machines)
+            # print machine_user_dict
+            for minion, users in machine_user_dict.iteritems():
+                ssh_purge_keys(minion, users)
+                
         for machine_id in machines.keys():
             set_ssh(machines[machine_id],
                     purgekeys=purgekeys)
