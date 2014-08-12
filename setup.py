@@ -19,7 +19,7 @@ def get_file_contents(file_path):
 
 
 setup(name='privacyideaadm',
-      version='1.3dev2',
+      version='1.3dev3',
       description='privacyIDEA admin Client',
       author='Cornelius Kölbel',
       author_email='cornelius@privacyidea.org',
