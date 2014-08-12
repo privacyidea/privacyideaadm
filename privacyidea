@@ -406,7 +406,8 @@ def daplug_mass_enroll(args, client):
         param = {}
         param["serial"] = "DPLG%s" % serial
         param["otpkey"] = hotpkey
-        param["otplen"] = args.otplen
+        param["otplen"] = int(args.otplen)
+        param["type"] = "daplug"
         param["description"] = "daplug dongle"
         r1 = client.inittoken(param)
         showresult(r1)
