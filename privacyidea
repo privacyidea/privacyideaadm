@@ -56,6 +56,7 @@ from privacyideautils.yubikey import YubikeyPlug
 from privacyideautils.yubikey import create_static_password
 from privacyideautils.clientutils import initetng
 from privacyideautils.clientutils import pyToken
+from privacyideautils.initdaplug import init_dongle
 from email.mime.text import MIMEText
 import smtplib
 import ConfigParser
@@ -397,9 +398,19 @@ def yubikey_mass_enroll(args, client):
                      args.yubiCR)
 
 
-def daplug_mass_enroll(args):
-    pass
-
+def daplug_mass_enroll(args, client):
+    (serial, hotpkey) = init_dongle(keyboard=args.keyboard,
+                                    mapping=args.hidmap,
+                                    otplen=args.otplen)
+    if serial:
+        param = {}
+        param["serial"] = "DPLG%s" % serial
+        param["otpkey"] = hotpkey
+        param["otplen"] = args.otplen
+        param["description"] = "daplug dongle"
+        r1 = client.inittoken(param)
+        showresult(r1)
+    
 
 def etokenng_mass_enroll(args, client):
     print """Mass-Enrolling eToken NG OTP.
@@ -862,8 +873,9 @@ def create_arguments():
                           help="Specify the HID mapping. The default HID "
                           "mapping is 05060708090a0b0c0d0e. Only use this, "
                           "if you know "
-                          "what you are doing!")
-    p_daplug.add_argument("--otplen", choices="[6, 8]",
+                          "what you are doing!",
+                          default="05060708090a0b0c0d0e")
+    p_daplug.add_argument("--otplen", choices=["6", "8"],
                           help="Specify if the OTP length should be 6 or 8.")
     
     # etokenng_mass_enroll
@@ -1294,7 +1306,6 @@ def main():
                                host,
                                admin=args.admin,
                                adminpw=password)
-    print args
     args.func(args, client)
 
 
