@@ -1,0 +1,1302 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  privacyIDEA
+#  Aug 11, 2014 Cornelius Kölbel
+#  License:  AGPLv3
+#  contact:  http://www.privacyidea.org
+#
+#  loosly based on linotpadm, which is originally written by
+#  (C) 2010 - 2014 LSE Leading Security Experts GmbH
+#  (http://www.linotp.org, http://www.lsexperts.de, linotp@lsexperts.de)
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+VERSION = "1.3"
+KNOWN_APPS = ["ssh", "luks"]
+DESCRIPTION = """This is the command line tool for the privacyIDEA server.
+It can be used to do several special actions like
+
+ enrolling tokens, listing users and tokens,
+ assign and delete tokens,
+ create and manage machines etc.
+ 
+You can put parameters like the password or the host connection definition
+into a file like 'my-secret-connection-values.txt' and reference this file
+like this at the command line:
+
+   @my-secret-connection-values.txt
+   
+Thus you can avoid exposing secret credentials.
+"""
+
+import argparse
+import sys
+import os
+import datetime
+import subprocess
+import getpass
+import binascii
+from privacyideautils.clientutils import showresult
+from privacyideautils.clientutils import dumpresult
+from privacyideautils.clientutils import privacyideaclient
+from privacyideautils.yubikey import enrollYubikey
+from privacyideautils.yubikey import YubikeyPlug
+from privacyideautils.yubikey import create_static_password
+from privacyideautils.clientutils import initetng
+from privacyideautils.clientutils import pyToken
+from email.mime.text import MIMEText
+import smtplib
+import ConfigParser
+from privacyideautils.yubikey import MODE_YUBICO, MODE_OATH, MODE_STATIC
+
+mode_string_mapping = {"YUBICO": MODE_YUBICO,
+                       "OATH": MODE_OATH,
+                       "STATIC": MODE_STATIC}
+
+
+def yubi_mass_enroll(lotpc,
+                     proc_params,
+                     yubi_mode,
+                     yubi_slot,
+                     yubi_prefix_serial,
+                     yubi_prefix,
+                     yubi_prefix_random,
+                     yubi_cr):
+    '''
+    Do the Yubikey mass enrollment
+
+    :param lotpc: the privacyidea connnection
+    :param proc_params: the additional parameters from the command line
+    :param yubi_mode: yubikey modus: YUBI_STATIC_MODE, YUBI_OATH_MODE,
+                      YUBI_AES_MODE
+    :param yubi_slot: slot of the yubikey [1,2]
+    :param yubi_prefix_serial: serial number added to the prefix
+    :param yubi_prefix: the public prefix
+    :param yubi_prefix_random: the rendom prefix
+    :param yubi_cr: boolean - uses as TOTP token a.k.a. Challenge Response mode
+    '''
+    yp = YubikeyPlug()
+    while 0 == 0:
+        print "\nPlease insert the next yubikey.",
+        sys.stdout.flush()
+        submit_param = {}
+        _ret = yp.wait_for_new_yubikey()
+        otpkey, serial = enrollYubikey(debug=False,
+                                       APPEND_CR=not yubi_cr,
+                                       prefix_serial=yubi_prefix_serial,
+                                       fixed_string=yubi_prefix,
+                                       len_fixed_string=yubi_prefix_random,
+                                       slot=yubi_slot,
+                                       mode=yubi_mode,
+                                       challenge_response=yubi_cr)
+        description = proc_params.get('description', "mass enrolled")
+        if yubi_mode == MODE_OATH:
+            # According to http://www.openauthentication.org/oath-id/prefixes/
+            # The OMP of Yubico is UB
+            # As TokenType we use OM (oath mode)
+            submit_param = {'serial': "UBOM%s_%s" % (serial, yubi_slot),
+                            'otpkey': otpkey,
+                            'description': description}
+            if yubi_cr:
+                submit_param['type'] = 'TOTP'
+                submit_param['timeStep'] = 30
+
+        elif yubi_mode == MODE_STATIC:
+            password = create_static_password(otpkey)
+            # print "otpkey   ", otpkey
+            # print "password ", password
+            submit_param = {'serial': "UBSM%s_%s" % (serial, yubi_slot),
+                            'otpkey': password,
+                            'type': "pw",
+                            'description': description}
+
+        elif yubi_mode == MODE_YUBICO:
+            yubi_otplen = 32
+            if yubi_prefix_serial:
+                yubi_otplen = 32 + len(serial) * 2
+            elif yubi_prefix:
+                yubi_otplen = 32 + (len(yubi_prefix) * 2)
+            elif yubi_prefix_random:
+                yubi_otplen = 32 + (yubi_prefix_random * 2)
+            # According to http://www.openauthentication.org/oath-id/prefixes/
+            # The OMP of Yubico is UB
+            # As TokenType we use AM (AES mode)
+            submit_param = {'type': 'yubikey',
+                            'serial': "UBAM%s_%s" % (serial, yubi_slot),
+                            'otpkey': otpkey,
+                            'otplen': yubi_otplen,
+                            'description': description}
+
+        else:
+            print "Unknown Yubikey mode"
+            pass
+        if 'realm' in proc_params:
+            submit_param['realm'] = proc_params.get('realm')
+        r1 = lotpc.inittoken(submit_param)
+        showresult(r1)
+
+
+def cifs_push(config, text):
+    '''
+    Push the the data text to a cifs share
+
+    :param config: dictionary with the fields cifs_server, cifs_share,
+                   cifs_dir, cifs_user, cifs_password
+    :type config: dict
+    :param text: text to be pushed to the windows share
+    :type text: string
+
+    '''
+    FILENAME = datetime.datetime.now().strftime("/tmp/%y%m%d-%H%M%S"
+                                                "_privacyideaadm.out")
+    f = open(FILENAME, 'w')
+    f.write(text)
+    f.close()
+
+    filename = os.path.basename(FILENAME)
+
+    print "Pushing %s to %s//%s/%s" % (filename,
+                                       config.get("cifs_server"),
+                                       config.get("cifs_share", ""),
+                                       config.get("cifs_dir"))
+
+    args = ["smbclient",
+            "//%s\\%s" % (config.get("cifs_server"),
+                          config.get("cifs_share", "")),
+            "-U", "%s%%%s" % (config.get("cifs_user"),
+                              config.get("cifs_password")), "-c",
+            "put %s %s\\%s" % (FILENAME,
+                               config.get("cifs_dir", "."),
+                               filename)]
+
+    p = subprocess.Popen(args,
+                         cwd=None,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         shell=False)
+    (result, error) = p.communicate()
+    _rcode = p.returncode
+    print result
+    print error
+
+    try:
+        os.remove(FILENAME)
+    except Exception, e:
+        print ("couldn't remove push test file: %r" % e)
+
+
+def sendmail(config, text):
+    '''
+    Send an email with the text
+
+    :param config: dictionary with the fields mail_from, mail_to, mail_host,
+                   mail_subject
+    :type config: dict
+    :param text: text to be sent via mail
+    :type text: string
+
+    '''
+    if not config.get("mail_to"):
+        Exception("mail_to required!")
+
+    if not config.get("mail_host"):
+        Exception("mail_host required!")
+
+    print "sending mail to %s" % config.get("mail_to")
+    msg = MIMEText(text)
+    sender = config.get("mail_from")
+    recipient = config.get("mail_to")
+    msg['Subject'] = config.get("mail_subject")
+    msg['From'] = sender
+    msg['To'] = recipient
+
+    s = smtplib.SMTP(config.get("mail_host"))
+    s.sendmail(sender, [recipient], msg.as_string())
+    s.quit()
+
+
+def read_config(config_file):
+    '''
+    Read the configuration/parameters from a config file
+    '''
+    cfg = ConfigParser.SafeConfigParser()
+    cfg_dict = {}
+    cfg.read(config_file)
+    for key, value in cfg.items("Default"):
+        cfg_dict[key] = value
+
+    return cfg_dict
+
+
+def options_to_dict(Option):
+    '''
+    This takes an array Option consisting of entries like
+    slot=7, partition=dev3
+    and converts it to a dictionary:
+    { "option_slot": "7",
+      "option_partition": "dev3" }
+      
+    :param Option: array of options
+    :type Option: array
+    :return: dictionary
+    '''
+    options = {}
+    for option in Option:
+        opt = option.split("=")
+        if len(opt) == 2:
+            # There was exactly one equal sign and we have a key and a value
+            value = opt[1]
+            if opt[0].startswith("option_"):
+                key = opt[0]
+            else:
+                key = "option_" + opt[0]
+            options[key] = value
+    return options
+
+
+def listtoken(args, client):
+    param = {}
+    if args.csv:
+        param['outform'] = 'csv'
+        if args.export_fields:
+            param['user_fields'] = args.export_fields
+        r1 = client.connect('/admin/show', {}, param, json_format=False)
+        if args.mail_host and args.mail_to:
+            sendmail(args, r1)
+        if args.cifs_server and args.cifs_user and args.cifs_password:
+            cifs_push(args, r1)
+    else:
+        r1 = client.listtoken(param)
+        result = r1['result']
+
+        tabsize = [4, 16, 14, 20, 20, 4, 4, 4, 4]
+        tabstr = ["%4s", "%16s", "%14s", "%20s", "%20s",
+                  "%4s", "%4s", "%4s", "%4s", "%4s"]
+        tabdelim = '|'
+        tabvisible = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+        tabhead = ['Id', 'Desc', 'S/N', 'User', 'Resolver',
+                   'MaxFail', 'Active', 'FailCount', 'Window']
+        tabentry = ['privacyIDEA.TokenId',
+                    'privacyIDEA.TokenDesc',
+                    'privacyIDEA.TokenSerialnumber',
+                    'User.username',
+                    'privacyIDEA.IdResClass',
+                    'privacyIDEA.MaxFail',
+                    'privacyIDEA.Isactive',
+                    'privacyIDEA.FailCount',
+                    'privacyIDEA.SyncWindow']
+        dumpresult(result['status'],
+                   result['value']['data'],
+                   {'tabsize': tabsize,
+                    'tabstr': tabstr,
+                    'tabdelim': tabdelim,
+                    'tabvisible': tabvisible,
+                    'tabhead': tabhead,
+                    'tabentry': tabentry})
+
+    
+def listuser(args, client):
+    r1 = client.userlist({'username': '*'})
+    result = r1['result']
+    tabentry = ['username',
+                'surname',
+                'userid',
+                'phone',
+                'mobile',
+                'email']
+    tabsize = [20, 20, 20, 20, 20, 20]
+    tabstr = ["%20s", "%20s", "%20s", "%20s", "%20s", "%20s"]
+    tabdelim = '|'
+    tabvisible = [0, 1, 2, 3, 4, 5]
+    tabhead = ['login', 'surname', 'Id', 'phone', 'mobile', 'email']
+    dumpresult(result['status'],
+               result['value'],
+               {'tabsize': tabsize, 'tabstr': tabstr,
+                'tabdelim': tabdelim, 'tabvisible': tabvisible,
+                'tabhead': tabhead, 'tabentry': tabentry})
+
+
+def inittoken(args, client):
+    param = {}
+    param["type"] = args.type
+    param["otpkey"] = args.otpkey
+    if args.user:
+        param["user"] = args.user
+    if args.serial:
+        param["serial"] = args.serial
+    if args.description:
+        param["description"] = args.description
+    if args.pin:
+        param["pin"] = args.pin
+
+    if args.etng:
+        tokenlabel = args.user or args.label
+        tdata = initetng({'label': tokenlabel,
+                          'debug': True})
+        if not tdata['userpin'] or not tdata['hmac'] or not tdata['serial']:
+            print "No token was added to privacyIDEA: ", tdata['error']
+            sys.exit(1)
+        param['serial'] = tdata['serial']
+        param['otpkey'] = tdata['hmac']
+        param['userpin'] = tdata['userpin']
+        param['sopin'] = tdata['sopin']
+        print("FIXME: what shall we do with the eToken password and "
+              "SO PIN: ", tdata['userpin'], tdata['sopin'])
+    elif args.pytoken:
+        if not args.user:
+            print "To initialize a pyToken, please provide a username"
+            sys.exit(1)
+        pyTemplate = "FAIL"
+        pyTemplateList = ('pytoken.template.py',
+                          "/usr/share/pyshared/privacyideautils/"
+                          "pytoken.template.py",
+                          "/usr/local/lib/python2.6/dist-packages/"
+                          "privacyideautils/pytoken.template.py",
+                          "/usr/lib/python2.6/dist-packages/"
+                          "privacyideautils/pytoken.template.py",
+                          )
+        for pT in pyTemplateList:
+            if os.path.isfile(pT):
+                pyTemplate = pT
+                break
+        if pyTemplate == "FAIL":
+            print "Could not find any pytoken template!"
+            sys.exit(1)
+        else:
+            pyTok = pyToken(keylen=256, template=pyTemplate)
+            pyTokenfile = pyTok.createToken(param['user'])
+            param['otpkey'] = pyTok.getHMAC()
+            param['serial'] = pyTok.getSerial()
+            print pyTokenfile
+                    
+    r1 = client.inittoken(param)
+    showresult(r1)
+
+
+def yubikey_mass_enroll(args, client):
+    print args
+    yubi_mass_enroll(client,
+                     {},
+                     mode_string_mapping.get(args.yubimode),
+                     int(args.yubislot),
+                     args.yubiprefixserial,
+                     args.yubiprefix,
+                     args.yubiprefixrandom,
+                     args.yubiCR)
+
+
+def daplug_mass_enroll(args):
+    pass
+
+
+def etokenng_mass_enroll(args, client):
+    print """Mass-Enrolling eToken NG OTP.
+!!! Beware the tokencontents of all tokens will be deleted. !!!
+
+Random User PINs and SO-PINs will be set.
+The SO-PIN will be stored in the Token-Database.
+"""
+    
+    param = {}
+    while 0 == 0:
+        answer = raw_input("Please insert the next eToken NG"
+                           " and press enter (x=Exit): ")
+        if "x" == answer.lower():
+            break
+        tokenlabel = args.label
+        description = args.description
+        tdata = initetng({'label': tokenlabel,
+                          'debug': False,
+                          'description': description})
+        if not tdata['userpin'] or not tdata['hmac'] or not tdata['serial']:
+            print "No token was added to privacyIDEA:", tdata['error']
+            sys.exit(1)
+        param['serial'] = tdata['serial']
+        param['otpkey'] = tdata['hmac']
+        param['userpin'] = tdata['userpin']
+        param['sopin'] = tdata['sopin']
+        r1 = client.inittoken(param)
+        showresult(r1)
+
+
+def assigntoken(args, client):
+    param = {}
+    param["user"] = args.user
+    param["serial"] = args.serial
+    r1 = client.assigntoken(param)
+    showresult(r1)
+
+
+def unassigntoken(args, client):
+    r1 = client.unassigntoken({"serial": args.serial})
+    showresult(r1)
+
+
+def importtoken(args, client):
+    print args
+    r1 = client.importtoken({'file': args.file})
+    showresult(r1)
+
+
+def disabletoken(args, client):
+    param = {}
+    if args.serial:
+        param["serial"] = args.serial
+    if args.user:
+        param["user"] = args.user
+    r1 = client.disabletoken(param)
+    showresult(r1)
+
+
+def enabletoken(args, client):
+    param = {}
+    if args.serial:
+        param["serial"] = args.serial
+    if args.user:
+        param["user"] = args.user
+    r1 = client.enabletoken(param)
+    showresult(r1)
+
+
+def removetoken(args, client):
+    param = {}
+    if args.serial:
+        param["serial"] = args.serial
+    if args.user:
+        param["user"] = args.user
+    r1 = client.removetoken(param)
+    showresult(r1)
+
+
+def resynctoken(args, client):
+    param = {}
+    param["serial"] = args.serial
+    param["otp1"] = args.otp1
+    param["otp2"] = args.otp2
+    r1 = client.removetoken(param)
+    showresult(r1)
+
+
+def settoken(args, client):
+    param = {}
+    if args.serial:
+        param["serial"] = args.serial
+    if args.user:
+        param["user"] = args.user
+    if args.pin:
+        param["pin"] = args.pin
+    if args.otplen:
+        param["OtpLen"] = args.otplen
+    if args.syncwindow:
+        param["SyncWindow"] = args.syncwindow
+    if args.maxfailcount:
+        param["MaxFailCount"] = args.maxfailcount
+    if args.counterwindow:
+        param["CounterWindow"] = args.counterwindow
+    if args.hashlib:
+        param["hashlib"] = args.hashlib
+    if args.timewindow:
+        param["timeWindow"] = args.timewindow
+    if args.timestep:
+        param["timeStep"] = args.timestep
+    if args.timeshift:
+        param["timeShift"] = args.timeshift
+    if args.countauthsuccessmax:
+        param["countAuthSuccessMax"] = args.countauthsuccessmax
+    if args.countauthsuccess:
+        param["countAuthSuccess"] = args.countauthsuccess
+    if args.countauthmax:
+        param["countAuthMax"] = args.countauthmax
+    if args.countauth:
+        param["countAuth"] = args.countauth
+    if args.validityperiodstart:
+        param["validityPeriodStart"] = args.validityperiodstart
+    if args.validityperiodend:
+        param["validityPeriodEnd"] = args.validityperiodend
+    if args.description:
+        param["description"] = args.description
+    if args.phone:
+        param["phone"] = args.phone
+        
+    r1 = client.set(param)
+    showresult(r1)
+
+
+def createmachine(args, client):
+    ret = client.connect("/machine/create",
+                         {},
+                         {"name": args.name,
+                          "ip": args.ip,
+                          "desc": args.description or ""})
+    showresult(ret)
+
+
+def deletemachine(args, client):
+    ret = client.connect("/machine/delete",
+                         {},
+                         {"name": args.name})
+    showresult(ret)
+
+
+def showmachine(args, client):
+    param = {}
+    if args.name:
+        param["name"] = args.name
+    ret = client.connect("/machine/show",
+                         {},
+                         param)
+    showresult(ret)
+
+
+def gettokenapps(args, client):
+    param = {}
+    if args.name:
+        param["name"] = args.name
+    if args.app:
+        param["application"] = args.app
+    if args.serial:
+        param["serial"] = args.serial
+    if args.challenge:
+        param["challenge"] = binascii.hexlify(args.challenge)
+    if args.challenge_hex:
+        param["challenge_hex"] = args.challenge_hex
+
+    ret = client.connect("/machine/gettokenapps", {}, param)
+    showresult(ret)
+
+
+def machine_addtoken(args, client):
+    param = {"name": args.name,
+             "serial": args.serial,
+             "application": args.app}
+    ret = client.connect("/machine/addtoken",
+                         {},
+                         param)
+    showresult(ret)
+    if len(args.option) > 0:
+        options = options_to_dict(args.option)
+        ret = client.connect("/machine/addoption",
+                             {},
+                             dict(param.items() + options.items()))
+        showresult(ret)
+
+
+def machine_showtoken(args, client):
+    param = {}
+    if args.name:
+        param["name"] = args.name
+    if args.serial:
+        param["serial"] = args.serial
+    if args.app:
+        param["app"] = args.app
+        param["application"] = args.app
+        
+    ret = client.connect("/machine/showtoken", {}, param)
+    showresult(ret)
+
+
+def machine_deltoken(args, client):
+    ret = client.connect("/machine/deltoken",
+                         {},
+                         {"name": args.name,
+                          "serial": args.serial,
+                          "application": args.app})
+    showresult(ret)
+
+
+def machine_addoption(args, client):
+    param = {"name": args.name,
+             "serial": args.serial,
+             "application": args.app}
+    if len(args.option) > 0:
+        options = options_to_dict(args.option)
+        ret = client.connect("/machine/addoption",
+                             {},
+                             dict(param.items() + options.items()))
+        showresult(ret)
+
+
+def machine_deloption(args, client):
+    param = {"name": args.name,
+             "serial": args.serial,
+             "application": args.app}
+    if len(args.option) > 0:
+        options = options_to_dict(args.option)
+        for k in options.keys():
+            ret = client.connect("/machine/deloption",
+                                 {},
+                                 dict({"key": k}.items() + param.items()))
+            showresult(ret)
+
+
+def getrealms(args, client):
+    r1 = client.getrealms({})
+    showresult(r1)
+
+
+def setrealm(args, client):
+    param = {}
+    param["realm"] = args.realm
+    param['resolvers'] = ",".join(args.resolver)
+    r1 = client.setrealm(param)
+    showresult(r1)
+
+
+def deleterealm(args, client):
+    r1 = client.deleterealm({"realm": args.realm})
+    showresult(r1)
+
+
+def setdefaultrealm(args, client):
+    r1 = client.setdefaultrealm({"realm": args.realm})
+    showresult(r1)
+
+
+def getresolvers(args, client):
+    r1 = client.getresolvers({})
+    showresult(r1)
+
+
+def deleteresolver(args, client):
+    r1 = client.deleteresolver({"resolver": args.resolver})
+    showresult(r1)
+
+
+def setresolver(args):
+    # TODO. We should add a nother parser layer for each type!
+    pass
+
+
+def securitymodule(args, client):
+    if args.module:
+        module = args.module
+        password = getpass.getpass(prompt="Please enter password for"
+                                   " security module '%s':" % module)
+        print("Setting the password of your security module %s" % module)
+        r1 = client.securitymodule(param={"hsm_id": module,
+                                          "password": str(password)})
+    else:
+        print "This is the configuration of your active Security module:"
+        print
+        r1 = client.securitymodule(param={})
+    showresult(r1)
+
+
+def get_config(args, client):
+    r1 = client.readserverconfig({})
+    showresult(r1)
+
+
+def set_config(args, client):
+    for config in args.config:
+        param = {}
+        (k, v) = config.split("=")
+        param["key"] = k
+        param["value"] = v
+        r1 = client.writeserverconfig(param)
+        showresult(r1)
+
+
+def del_config(args, client):
+    for k in args.key:
+        param = {}
+        param["key"] = k
+        r1 = client.deleteconfig(param)
+        showresult(r1)
+
+
+def create_arguments():
+    parser = argparse.ArgumentParser(description=DESCRIPTION,
+                                     fromfile_prefix_chars='@')
+    parser.add_argument("-U", "--url",
+                        help="The URL of the privacyIDEA server including "
+                        "protocol and port like "
+                        "https://localhost:5001",
+                        required=True)
+    parser.add_argument("-a", "--admin",
+                        help="The name of the administrator like "
+                        "admin@admin",
+                        required=True)
+    parser.add_argument("-p", "--password",
+                        help="The password of the administrator. Please "
+                        "avoid to post the password at the command line. "
+                        "You will be asked for it - or you can provide the "
+                        "password in a configuration file. "
+                        "Note, that you can write a file password.txt "
+                        "containing two lines '--password' and the second "
+                        "line the password itself and add this to the "
+                        "command line with @password.txt")
+    parser.add_argument("-v", "--version",
+                        help="Print the version of the program.",
+                        action='version', version='%(prog)s ' + VERSION)
+    
+    subparsers = parser.add_subparsers(help="The available commands. Running "
+                                       "<command> -h will give you a detailed "
+                                       "help on this command.",
+                                       title="COMMANDS",
+                                       description="The command line tool "
+                                       "requires one command, to know what "
+                                       "action it should take")
+    
+    ################################################################
+    #
+    # listuser
+    #
+    p_listuser = subparsers.add_parser('user',
+                                       help="list the available users.")
+    p_listuser.set_defaults(func=listuser)
+    
+    ################################################################
+    #
+    # token commands
+    #
+    token_parser = subparsers.add_parser("token",
+                                         help="token commands used to "
+                                         "list tokens, assign, enroll, resync "
+                                         "...")
+    token_sub = token_parser.add_subparsers()
+    
+    # listtokens
+    p_listtoken = token_sub.add_parser('list',
+                                       help='list the available tokens.')
+    p_listtoken.set_defaults(func=listtoken)
+    p_listtoken.add_argument("--serial", help="The serial number of the token "
+                             "to list. May contain wildcards.")
+    p_listtoken.add_argument("--user",
+                             help="List all tokens of this given user.")
+    p_listtoken.add_argument('--csv', action="store_true",
+                             help='output as csv format')
+    p_listtoken.add_argument('--export_fields',
+                             help="comma separated list of additional "
+                             "fields to export into the CSV export.")
+    p_listtoken.add_argument("--mail_host",
+                             help="If exporting as CSV you can send the "
+                             "result as mail via this mail host.")
+    p_listtoken.add_argument("--mail_to",
+                             help="If exporting as CSV you can send the "
+                             "result to this email address.")
+    p_listtoken.add_argument("--cifs_server",
+                             help="If exporting as CSV you can save the "
+                             "result to this CIFS server.")
+    p_listtoken.add_argument("--cifs_user",
+                             help="If exporting as CSV you can save the "
+                             "result to a CIFS server with this username.")
+    p_listtoken.add_argument("--cifs_password",
+                             help="If exporting as CSV you can save the "
+                             "result to a CIFS server with this password.")
+    # inittoken
+    p_inittoken = token_sub.add_parser("init",
+                                       help="Initialize a token. I.e. create "
+                                       "a new token in privacyidea.")
+    p_inittoken.set_defaults(func=inittoken)
+    p_inittoken.add_argument("--user", help="If a user is specified, the "
+                             "token is directly assigned to this user.")
+    p_inittoken.add_argument("--serial", help="This is the new serial number "
+                             "of the token")
+    p_inittoken.add_argument("--description", help="The description of the "
+                             "token. This can be used to identify the token "
+                             "more easily.",
+                             default="command line enrolled")
+    p_inittoken.add_argument("--pin", help="The OTP PIN of the token.")
+    p_inittoken.add_argument("--otpkey", help="The OTP key, like the HMAC key")
+    p_inittoken.add_argument("--type", help="The token type",
+                             choices=["hmac", "totp", "pw", "spass", "dpw",
+                                      "ssh", "sms", "email", "yubico"],
+                             default="hmac")
+    p_inittoken.add_argument("--etng", help="If specified, an etoken NG will "
+                             "be initialized", action="store_true")
+    p_inittoken.add_argument("--pytoken", help="If specified a python script "
+                             "will be created.",
+                             action="store_true")
+    
+    # yubikey_mass_enroll
+    p_ykmass = token_sub.add_parser("yubikey_mass_enroll",
+                                    help="Initialize a bunch of yubikeys")
+    p_ykmass.set_defaults(func=yubikey_mass_enroll)
+    p_ykmass.add_argument("--yubiprefix", help="A prefix that is outputted "
+                          "by the yubikey",
+                          default="")
+    p_ykmass.add_argument("--yubiprefixrandom", help="A random prefix "
+                          "of length",
+                          metavar="NUMBER",
+                          type=int,
+                          default=0)
+    p_ykmass.add_argument("--yubiprefixserial",
+                          help="Use the serial number of "
+                          "the yubikey as prefix.", action="store_true")
+    p_ykmass.add_argument("--yubimode", help="The mode the yubikey should "
+                          "be initialized in. (default=OATH)",
+                          choices=["OATH", "YUBICO", "STATIC"],
+                          default="OATH")
+    p_ykmass.add_argument("--yubislot", help="The slot of the yubikey, that "
+                          "is initialized (default=1)",
+                          choices=["1", "2"],
+                          default="1")
+    p_ykmass.add_argument("--yubiCR",
+                          help="Initialize the yubikey in challenge/"
+                          "response mode.",
+                          action="store_true")
+    
+    # daplug_mass_enroll
+    p_daplug = token_sub.add_parser("daplug_mass_enroll",
+                                    help="Initialize a bunch of "
+                                    "daplug dongles.")
+    p_daplug.set_defaults(func=daplug_mass_enroll)
+    p_daplug.add_argument("-k", "--keyboard", action="store_true",
+                          help="If this option is set, the daplug will "
+                          "simulate "
+                          "a keyboard and type the OTP value when plugged in.")
+    p_daplug.add_argument("--hidmap",
+                          help="Specify the HID mapping. The default HID "
+                          "mapping is 05060708090a0b0c0d0e. Only use this, "
+                          "if you know "
+                          "what you are doing!")
+    p_daplug.add_argument("--otplen", choices="[6, 8]",
+                          help="Specify if the OTP length should be 6 or 8.")
+    
+    # etokenng_mass_enroll
+    p_etngmass = token_sub.add_parser("etokenng_mass_enroll",
+                                      help="Enroll a bunch of eToken NG OTP.")
+    p_etngmass.set_defaults(func=etokenng_mass_enroll)
+    p_etngmass.add_argument("--label",
+                            help="The label of the eToken NG OTP.",
+                            default="privacyIDEAToken")
+    p_etngmass.add_argument("--description",
+                            help="Description of the token.",
+                            default="mass enrolled")
+    
+    # assigntoken
+    p_assigntoken = token_sub.add_parser("assign",
+                                         help="Assign a token to a user")
+    p_assigntoken.set_defaults(func=assigntoken)
+    p_assigntoken.add_argument("--serial", help="Serial number of the token "
+                               "to assign",
+                               required=True)
+    p_assigntoken.add_argument("--user", help="The user, who should get "
+                               "the token",
+                               required=True)
+    
+    # unassigntoken
+    p_unassigntoken = token_sub.add_parser("unassign",
+                                           help="Assign a token to a user")
+    p_unassigntoken.set_defaults(func=unassigntoken)
+    p_unassigntoken.add_argument("--serial", help="Serial number of the token "
+                                 "to unassign",
+                                 required=True)
+    
+    # importtoken
+    p_import = token_sub.add_parser("import",
+                                    help="Import a token file")
+    p_import.set_defaults(func=importtoken)
+    p_import.add_argument("-f", "--file", help="The token file to import",
+                          required=True)
+    
+    # disabletoken
+    p_disable = token_sub.add_parser("disable",
+                                     help="Disable token by serial or by user")
+    p_disable.set_defaults(func=disabletoken)
+    p_disable.add_argument("--serial",
+                           help="serial number of the token to disable")
+    p_disable.add_argument("--user",
+                           help="The username of the user, whose tokens "
+                           "should be disabled")
+    
+    # enabletoken
+    p_enable = token_sub.add_parser("enable",
+                                    help="Enable token by serial or by user")
+    p_enable.set_defaults(func=enabletoken)
+    p_enable.add_argument("--serial",
+                          help="serial number of the token to enable")
+    p_enable.add_argument("--user",
+                          help="The username of the user, whose tokens should "
+                          "be enabled")
+    
+    # removetoken
+    p_remove = token_sub.add_parser("remove",
+                                    help="Remove token by serial or by user")
+    p_remove.set_defaults(func=removetoken)
+    p_remove.add_argument("--serial",
+                          help="serial number of the token to remove")
+    p_remove.add_argument("--user",
+                          help="The username of the user, whose tokens should "
+                          "be removed")
+    
+    # resynctoken
+    p_resync = token_sub.add_parser("resync",
+                                    help="Resynchronize the token")
+    p_resync.set_defaults(func=resynctoken)
+    p_resync.add_argument("--serial", help="Serial number of the token",
+                          required=True)
+    p_resync.add_argument("--otp1", help="First OTP value",
+                          required=True)
+    p_resync.add_argument("--otp2", help="Second consecutive OTP value",
+                          required=True)
+    
+    # set
+    p_set = token_sub.add_parser("set",
+                                 help="Set certain attributes of a token.")
+    p_set.set_defaults(func=settoken)
+    p_set.add_argument("--serial", help="Serial number of the token")
+    p_set.add_argument("--user", help="User, whose token should be modified")
+    p_set.add_argument("--pin", help="Set the OTP PIN of the token")
+    p_set.add_argument("--otplen",
+                       help="Set the OTP lenght of the token. Usually this is "
+                       "6 or 8.",
+                       type=int)
+    p_set.add_argument("--syncwindow",
+                       help="Set the synchronizatio window of a token.",
+                       type=int)
+    p_set.add_argument("--maxfailcount",
+                       help="Set the maximum fail counter of a token.",
+                       type=int)
+    p_set.add_argument("--counterwindow",
+                       help="Set the window of the counter.",
+                       type=int)
+    p_set.add_argument("--hashlib",
+                       help="Set the hashlib.",
+                       choices=["sha1", "sha2", "sha256", "sha384", "sha512"])
+    p_set.add_argument("--timewindow",
+                       help="Set the timewindow.",
+                       type=int)
+    p_set.add_argument("--timestep",
+                       help="Set the timestep. Usually 30 or 60.",
+                       type=int)
+    p_set.add_argument("--timeshift",
+                       help="Set the clock drift, the time shift.",
+                       type=int)
+    p_set.add_argument("--countauthsuccessmax",
+                       help="Set the maximum allowed successful "
+                       "authentications",
+                       type=int)
+    p_set.add_argument("--countauthsuccess",
+                       help="Set the number of successful authentications",
+                       type=int)
+    p_set.add_argument("--countauth",
+                       help="Set the number of authentications",
+                       type=int)
+    p_set.add_argument("--countauthmax",
+                       help="Set the maximum allowed of authentications",
+                       type=int)
+    p_set.add_argument("--validityperiodstart",
+                       help="Set the start date when the token is usable.")
+    p_set.add_argument("--validityperiodend",
+                       help="Set the end date till when the token is usable.")
+    p_set.add_argument("--description",
+                       help="Set the description of the token.")
+    p_set.add_argument("--phone",
+                       help="Set the phone number of the token.")
+           
+    #####################################################################
+    #
+    # machine META commands
+    #
+    machine_parser = subparsers.add_parser("machine",
+                                           help="machine commands used to "
+                                           "create new machines and assign "
+                                           "tokens and applications to these "
+                                           "machines")
+    machine_sub = machine_parser.add_subparsers()
+    # createmachine
+    p_createmachine = machine_sub.add_parser("create",
+                                             help="Create a new machine "
+                                             "definition.")
+    p_createmachine.set_defaults(func=createmachine)
+    p_createmachine.add_argument("--name", help="The hostname of the machine",
+                                 required=True)
+    p_createmachine.add_argument("--ip", help="The IP address of the machine",
+                                 required=True)
+    p_createmachine.add_argument("--desc", help="A description of the machine")
+    p_createmachine.add_argument("--decommission", help="A decommission date "
+                                 "of the machine")
+    
+    # deletemachine
+    p_deletemachine = machine_sub.add_parser("delete",
+                                             help="Delete a machine "
+                                             "definition")
+    p_deletemachine.set_defaults(func=deletemachine)
+    p_deletemachine.add_argument("--name", help="The name of the machine to "
+                                 "be deleted",
+                                 required=True)
+    
+    # showmachine
+    p_showmachine = machine_sub.add_parser("list",
+                                           help="Show details of one machine "
+                                           "or of several machines")
+    p_showmachine.set_defaults(func=showmachine)
+    p_showmachine.add_argument("--name",
+                               help="The name of the machine. If no "
+                               "name is given, all machines will be "
+                               "displayed.")
+    
+    # getttokenapps
+    p_gettapps = machine_sub.add_parser("gettokenapps",
+                                        help="get the application definitions "
+                                        "of "
+                                        "a machine, including the apps, the "
+                                        "serial numbers and the "
+                                        "authentication items")
+    p_gettapps.set_defaults(func=gettokenapps)
+    p_gettapps.add_argument("--name", help="The name of the machine")
+    p_gettapps.add_argument("--app", help="The name of the application",
+                            choices=KNOWN_APPS)
+    p_gettapps.add_argument("--serial", help="The serial number of the token")
+    p_gettapps.add_argument("--challenge",
+                            help="A challenge value, that might "
+                            "be needed to return an authentication item")
+    p_gettapps.add_argument("--challenge_hex",
+                            help="A challenge value in hexadecimal format, "
+                            "that "
+                            "might be needed to return an authentication item")
+    
+    # machine_addtoken
+    p_maddtoken = machine_sub.add_parser("addtoken",
+                                         help="Add a token with an "
+                                         "application "
+                                         "to a machine")
+    p_maddtoken.set_defaults(func=machine_addtoken)
+    p_maddtoken.add_argument("--name", help="The name of the machine",
+                             required=True)
+    p_maddtoken.add_argument("--serial", help="The serial number of the token",
+                             required=True)
+    p_maddtoken.add_argument("--app", help="The name of the application",
+                             required=True,
+                             choices=KNOWN_APPS)
+    p_maddtoken.add_argument("--option",
+                             help="Special option for the "
+                             "application. Like the user for SSH or the "
+                             "partition or slot for LUKS.",
+                             action="append")
+    
+    # machine_showtoken
+    p_mshowtoken = machine_sub.add_parser("showtoken",
+                                          help="List the token machine "
+                                          "mapping. "
+                                          "You can list all mappings for a "
+                                          "token, "
+                                          "for a machine or for an "
+                                          "application")
+    p_mshowtoken.set_defaults(func=machine_showtoken)
+    p_mshowtoken.add_argument("--name", help="The name of the machine to show")
+    p_mshowtoken.add_argument("--serial",
+                              help="The serial number of the token,"
+                              " that is assigned in those mappings.")
+    p_mshowtoken.add_argument("--app", help="The name of the application",
+                              choices=KNOWN_APPS)
+    
+    # machine_deltoken
+    p_mdeltoken = machine_sub.add_parser("deltoken",
+                                         help="Delete a mapping from a "
+                                         "machine. "
+                                         "This does not delete the machine")
+    p_mdeltoken.set_defaults(func=machine_deltoken)
+    p_mdeltoken.add_argument("--name",
+                             help="The name of the machine to delete",
+                             required=True)
+    p_mdeltoken.add_argument("--serial",
+                             help="The serial number of the token, "
+                             "that is mapped", required=True)
+    p_mdeltoken.add_argument("--app",
+                             help="The name of the application that is "
+                             "mapped.", required=True,
+                             choices=KNOWN_APPS)
+    
+    # machine_addoption
+    p_maddoption = machine_sub.add_parser("addoption",
+                                          help="Add an option to a machine "
+                                          "mapping.")
+    p_maddoption.set_defaults(func=machine_addoption)
+    p_maddoption.add_argument("--name", help="The name of the machine of the "
+                              "mapping to add the option to.",
+                              required=True)
+    p_maddoption.add_argument("--serial",
+                              help="The serial number of the token "
+                              "of the mapping to add the option to.",
+                              required=True)
+    p_maddoption.add_argument("--app",
+                              help="The name of the application of the "
+                              "mapping to add the option to",
+                              required=True,
+                              choices=KNOWN_APPS)
+    p_maddoption.add_argument("--option",
+                              help="The option to add. It should be "
+                              "passed like key=value. You can add several "
+                              "options "
+                              "at once.", required=True,
+                              action="append")
+    
+    # machine_deloption
+    p_mdeloption = machine_sub.add_parser("deloption",
+                                          help="Delete an option from "
+                                          "a machine mapping.")
+    p_mdeloption.set_defaults(func=machine_deloption)
+    p_mdeloption.add_argument("--name", help="The name of the machine of the "
+                              "mapping to delete the option from.",
+                              required=True)
+    p_mdeloption.add_argument("--serial",
+                              help="The serial number of the token "
+                              "of the mapping to to delete the option from.",
+                              required=True)
+    p_mdeloption.add_argument("--app",
+                              help="The name of the application of the "
+                              "mapping to delete the option from.",
+                              required=True,
+                              choices=KNOWN_APPS)
+    p_mdeloption.add_argument("--option",
+                              help="The option to delete. You only "
+                              "need to pass the key of the option. You can "
+                              "specify several options at once.",
+                              required=True,
+                              action="append")
+    
+    ###################################################################
+    #
+    # securitymodule
+    #
+    p_securitymodule = subparsers.add_parser("securitymodule",
+                                             help="Get the status of the "
+                                             "securitymodule or set the "
+                                             "password "
+                                             "of the securitymodule")
+    p_securitymodule.set_defaults(func=securitymodule)
+    p_securitymodule.add_argument("--module", help="The module name of the "
+                                  "securitymodule. If the module name is "
+                                  "specified you can set the password of the "
+                                  "module.")
+    
+    ################################################################
+    #
+    # getconfig
+    #
+    config_parser = subparsers.add_parser("config",
+                                          help="server configuration")
+    config_sub = config_parser.add_subparsers()
+    
+    p_getconfig = config_sub.add_parser("get",
+                                        help="returns the configuration of "
+                                        "the privacyIDEA server.")
+    p_getconfig.set_defaults(func=get_config)
+    
+    # setconfig
+    p_setconfig = config_sub.add_parser("set",
+                                        help="set a configuration value of "
+                                        "the privacyIDEA server.")
+    p_setconfig.set_defaults(func=set_config)
+    p_setconfig.add_argument("--config", required=True, action="append",
+                             help="Use the config like --config=value=key. "
+                             "You can use several --config arguments.")
+    
+    # delconfig
+    p_delconfig = config_sub.add_parser("del",
+                                        help="delete a configuration value of "
+                                        "the privacyIDEA server.")
+    p_delconfig.set_defaults(func=del_config)
+    p_delconfig.add_argument("--key", required=True, action="append",
+                             help="Specify the config key to delete. "
+                             "You can use several --key arguments.")
+    
+    ###############################################################
+    #
+    # realm
+    #
+    realm_parser = subparsers.add_parser("realm",
+                                         help="realm configuration")
+    realm_sub = realm_parser.add_subparsers()
+    # get
+    p_getrealm = realm_sub.add_parser("get",
+                                      help="returns a list of the realms")
+    p_getrealm.set_defaults(func=getrealms)
+    
+    # set
+    p_setrealm = realm_sub.add_parser("set",
+                                      help="Create a new realm")
+    p_setrealm.set_defaults(func=setrealm)
+    p_setrealm.add_argument("--realm", required=True,
+                            help="The name of the new realm")
+    p_setrealm.add_argument("--resolver", required=True, action="append",
+                            help="The name of the resolver. You can specify "
+                            "several resolvers by using several --resolver "
+                            "arguments.")
+    
+    # delete
+    p_deleterealm = realm_sub.add_parser("delete",
+                                         help="returns a list of the realms")
+    p_deleterealm.set_defaults(func=deleterealm)
+    p_deleterealm.add_argument("--realm", required=True,
+                               help="The name of the realm to delete")
+    
+    # set default realm
+    p_defaultrealm = realm_sub.add_parser("default",
+                                          help="The the default realm")
+    p_defaultrealm.set_defaults(func=setdefaultrealm)
+    p_defaultrealm.add_argument("--realm", required=True,
+                                help="The name of the realm that should be "
+                                "the default realm.")
+    
+    ################################################################
+    #
+    #  resolver
+    resolver_parser = subparsers.add_parser("resolver",
+                                            help="resolver configuration")
+    resolver_sub = resolver_parser.add_subparsers()
+    # get
+    p_getresolver = resolver_sub.add_parser("get",
+                                            help="Returns a list of the "
+                                            "resolvers.")
+    p_getresolver.set_defaults(func=getresolvers)
+    
+    # set
+    p_setresolver = resolver_sub.add_parser("set",
+                                            help="Create a new resolver.")
+    p_setresolver.set_defaults(func=setresolver)
+    p_setresolver.add_argument("--resolver", required=True,
+                               help="The name of the new resolver.")
+    p_setresolver.add_argument("--type", required=True,
+                               choices=["LDAP", "SQL", "FILE", "SCIM"],
+                               help="The type of the new resolver")
+    # TODO: all options for the resolvers!
+    
+    # delete
+    p_deleteresolver = resolver_sub.add_parser("delete",
+                                               help="Delete a resolver.")
+    p_deleteresolver.set_defaults(func=deleteresolver)
+    p_deleteresolver.add_argument("--resolver", required=True,
+                                  help="The name of the resolver to delete.")
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = create_arguments()
+
+    if not args.password:
+        password = getpass.getpass(prompt="Please enter password for"
+                                   " '%s':" % args.admin)
+    else:
+        password = args.password
+
+    protocol = args.url.split(":", 1)[0]
+    host = args.url.split(":", 1)[1].strip("/")
+    # Create the privacyideaclient instance
+    client = privacyideaclient(protocol,
+                               host,
+                               admin=args.admin,
+                               adminpw=password)
+    print args
+    args.func(args, client)
+
+
+if __name__ == '__main__':
+    main()

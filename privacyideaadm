@@ -43,6 +43,7 @@ from email.mime.text import MIMEText
 import sys
 import os
 
+
 YUBI_STATIC_MODE = 3
 YUBI_OATH_MODE = 2
 YUBI_AES_MODE = 1
@@ -946,4 +947,10 @@ def main():
 
 
 if __name__ == '__main__':
+    print
+    print "Deprecation Warning! This command will be removed in version 1.4!"
+    print
     main()
+    print
+    print "Deprecation Warning! This command will be removed in version 1.4!"
+    print

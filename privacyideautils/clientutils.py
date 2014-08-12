@@ -57,8 +57,11 @@ ldap_opts_map = {'rl_uri': 'LDAPURI',
 
 
 def showresult(rv):
-    pp = pprint.PrettyPrinter(indent=4)
-    print pp.pformat(rv['result'])
+    try:
+        pp = pprint.PrettyPrinter(indent=4)
+        print pp.pformat(rv['result'])
+    except:
+        print rv
 
 
 def initetng():

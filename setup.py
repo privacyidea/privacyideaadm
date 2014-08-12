@@ -29,7 +29,8 @@ setup(name='privacyideaadm',
                'privacyidea-luks-assign',
                'privacyidea-ssh-assign'],
       install_requires=['usb'],
-      data_files=[('share/man/man1', ["privacyideaadm.1"])],
+      data_files=[('share/man/man1', ["privacyideaadm.1",
+				      "doc/_build/man/privacyidea.1"])],
       license='AGPLv3',
       long_description=get_file_contents('DESCRIPTION')
       )

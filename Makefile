@@ -3,10 +3,12 @@ info:
 	@echo "builddeb		-- build debian (ubuntu 14.04) package"
 	@echo "ppa-dev          -- upload to ppa development repo"
 	@echo "ppa		-- upload to ppa release repo"
+	@echo "man		-- make the manpage"
 
 VERSION=1.3~dev1
 
 pypi:
+	make man
 	python setup.py sdist upload
 
 clean:
@@ -14,9 +16,14 @@ clean:
 	rm -fr build/
 	rm -fr dist/
 	rm -fr DEBUILD
+	(cd doc; make clean)
+
+man:
+	(cd doc; make man)
 
 debianize:
 	make clean
+	make man
 	mkdir -p DEBUILD/privacyideaadm.org
 	cp -r * DEBUILD/privacyideaadm.org || true
 	cp LICENSE DEBUILD/privacyideaadm.org/debian/copyright
