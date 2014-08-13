@@ -18,11 +18,14 @@ try:
     defKeys = KeySet(0x01, binascii.hexlify(KEY))
     DAPLUG = True
 except Exception as e:
+    DAPLUG = False
+
+
+def _daplug_missing_info():
     print("Can not find daplug python modules.")
     print("You will not be able to enroll daplug devices.")
     print("%s" % e)
-    DAPLUG = False
-
+    
 
 def _delete_HOTP(dongle):
     # Clean HOTP key
@@ -72,6 +75,7 @@ def init_dongle(keyboard=False,
                 mapping="05060708090a0b0c0d0e",
                 otplen=6):
     if not DAPLUG:
+        _daplug_missing_info()
         return (None, None)
     utils.DEBUG = False
     dongle = getFirstDongle()
