@@ -17,7 +17,7 @@ have privacyidea-luks-assign && _privacyidea-luks-assign() {
     esac
 
     case "$prev" in
-		privacyidea-ssh-assign|@*|--clearslot)
+		privacyidea-luks-assign|@*|--clearslot)
 			# the helps
 	   		 COMPREPLY=( $( compgen -W '-h --url --admin --adminrealm --password -v  --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
 		;;
