@@ -1,1 +1,2 @@
-doc/_build/man/privacyidea.1     usr/share/man/man1
+doc/_build/man/privacyidea.1    usr/share/man/man1
+bash_completion/privacyidea	etc/bash_completion.d
