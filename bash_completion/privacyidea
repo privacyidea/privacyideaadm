@@ -1,0 +1,96 @@
+have privacyidea && _privacyidea() {
+    local cur prev prevprev shell i userhost path   
+
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    prevprev="${COMP_WORDS[COMP_CWORD-2]}"
+
+    _expand || return 0
+
+    case "$cur" in
+        @*)     COMPREPLY=( $(compgen -f -P@ -- "${cur:1}"))
+		return 0
+	;;
+	-*) COMPREPLY=( $( compgen -W '-h' -- "$cur" ))
+	;;
+    esac
+
+    case "$prev" in
+		privacyidea|@*)
+			# the commands
+			case "$cur" in
+	   			*) COMPREPLY=( $( compgen -W 'token user machine securitymodule config realm resolver' -- "$cur" ))
+				;;
+			esac
+		;;
+		token)	
+			# subcommands for tokens
+			case "$cur" in
+				*) COMPREPLY=( $( compgen -W 'list init yubikey_mass_enroll daplug_mass_enroll \
+								etokenng_mass_enroll assign unassign import \
+    								disable enable remove resync set' -- "$cur" ))
+				;;
+			esac
+		;;
+		config)
+			# subcommands for config
+			case "$cur" in 
+				*) COMPREPLY=( $( compgen -W 'get set del' -- "$cur" ))
+				;;
+			esac
+		;;
+		machine)
+			COMPREPLY=( $( compgen -W 'create delete list gettokenapps addtoken \
+						    showtoken deltoken addoption deloption' -- "$cur" ))
+		;;
+		realm)
+			COMPRELPY=( $( compgen -W 'get set delete default' -- "$cur" ))
+		;;
+		resolver)
+			COMPREPLY=( $( compgen -W 'get set delete' -- "$cur" ))
+		;;
+		# File import
+		-f|--file)
+			_filedir
+		;;			
+    esac
+
+    case "$prevprev" in
+	# The attributes of the token subcommand
+	token)
+		case "$prev" in
+			disable|enable|assign|remove)
+				COMPREPLY=( $( compgen -W '--serial --user -h' -- "$cur" ))
+			;;
+			import)
+				COMPREPLY=( $( compgen -W '-h -f --file' -- "$cur" ))
+			;;
+			list)
+				COMPREPLY=( $( compgen -W '-h --serial --user --csv --export_fields --mail_host \
+							--mail_to --cifs_server --cifs_user --cifs_password' -- "$cur" ))
+			;;
+			resync)
+				COMPREPLY=( $( compgen -W '-h --serial --otp1 --otp2' -- "$cur" ))
+			;;
+		esac
+	;;
+	# Mail settings
+	--mail_to|--mail_host|--export_fields|--csv)
+		 COMPREPLY=( $( compgen -W '-h --csv --export_fields --mail_host \
+                                                        --mail_to' -- "$cur" ))
+	;;
+	# CIFS export settings
+	--export_fields|--csv|--cifs_server|--cifs_user|--cifs_password)
+		COMPREPLY=( $( compgen -W '-h --csv --export_fields --cifs_server --cifs_user --cifs_password' -- "$cur" ))
+
+	;;
+	# resync settings
+	--otp1) 
+		COMPREPLY=( $( compgen -W '-h --otp2' -- "$cur" ))
+	;;
+    esac
+
+    return 0
+} &&
+complete -F _privacyidea $nospace $filenames privacyidea
