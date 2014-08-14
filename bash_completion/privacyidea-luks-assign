@@ -1,0 +1,58 @@
+have privacyidea-luks-assign && _privacyidea-luks-assign() {
+    local cur prev prevprev shell i userhost path   
+
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    prevprev="${COMP_WORDS[COMP_CWORD-2]}"
+
+    _expand || return 0
+
+    case "$cur" in
+        @*)     COMPREPLY=( $(compgen -f -P@ -- "${cur:1}"))
+		return 0
+	;;
+	-*) COMPREPLY=( $( compgen -W '-h --url --admin --adminrealm --password -v --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
+	;;
+    esac
+
+    case "$prev" in
+		privacyidea-ssh-assign|@*|--clearslot)
+			# the helps
+	   		 COMPREPLY=( $( compgen -W '-h --url --admin --adminrealm --password -v  --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
+		;;
+    esac
+
+    case "$prevprev" in 
+		--admin)
+			COMPREPLY=( $( compgen -W '--url --adminrealm --password --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
+		;;
+		--url)
+                        COMPREPLY=( $( compgen -W '--admin --adminrealm --password --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
+                ;;
+		--adminrealm)
+                        COMPREPLY=( $( compgen -W '--url --admin --password --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
+                ;;
+		--password)
+                        COMPREPLY=( $( compgen -W '--url --admin --adminrealm --clearslot --luksslot --name --lukspassword --serial' -- "$cur" ))
+                ;;
+		--lukspassword)
+                        COMPREPLY=( $( compgen -W '--url --admin --adminrealm --password --clearslot --luksslot --name --serial' -- "$cur" ))
+                ;;
+		--luksslot)
+                        COMPREPLY=( $( compgen -W '--url --admin --adminrealm --password --clearslot --lukspassword --name --serial' -- "$cur" ))
+                ;;
+		--name)
+                        COMPREPLY=( $( compgen -W '--url --admin --adminrealm --password --clearslot --luksslot --lukspassword --serial' -- "$cur" ))
+                ;;
+		--serial)
+                        COMPREPLY=( $( compgen -W '--url --admin --adminrealm --password --clearslot --luksslot --lukspassword --name' -- "$cur" ))
+                ;;
+
+    esac
+
+
+
+    return 0
+} &&
+complete -F _privacyidea-luks-assign $nospace $filenames privacyidea-luks-assign
