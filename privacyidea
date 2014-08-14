@@ -739,8 +739,12 @@ def create_arguments():
                         required=True)
     parser.add_argument("-a", "--admin",
                         help="The name of the administrator like "
-                        "admin@admin",
+                        "admin@admin or admin",
                         required=True)
+    parser.add_argument("-r", "--adminrealm",
+                        help="The realm of the administrator like "
+                        "'admin'",
+                        default="")
     parser.add_argument("-p", "--password",
                         help="The password of the administrator. Please "
                         "avoid to post the password at the command line. "
@@ -1306,7 +1310,8 @@ def main():
     client = privacyideaclient(protocol,
                                host,
                                admin=args.admin,
-                               adminpw=password)
+                               adminpw=password,
+                               adminrealm=args.adminrealm)
     args.func(args, client)
 
 

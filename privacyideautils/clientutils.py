@@ -152,7 +152,7 @@ class privacyideaclient:
     '''
     def __init__(self, protocol, url, admin=None, adminpw=None,
                  cert=None, key=None, proxy=None,
-                 authtype="Digest"):
+                 authtype="Digest", adminrealm=""):
         '''
         arguments:
             The class is created with the parameters
@@ -179,6 +179,7 @@ class privacyideaclient:
         self.url = url
         self.admin = admin
         self.adminpw = adminpw
+        self.adminrealm = adminrealm
         self.cert = cert
         self.key = key
         self.proxy = proxy
@@ -216,7 +217,7 @@ class privacyideaclient:
 
     def setcredentials(self, protocol, url, admin=None, adminpw=None,
                        cert=None, key=None, proxy=None,
-                       authtype="Digest"):
+                       authtype="Digest", adminrealm=""):
         '''
         arguments:
             The same arguments as when initializing the instance.
@@ -231,6 +232,7 @@ class privacyideaclient:
         self.url = url
         self.admin = admin
         self.adminpw = adminpw
+        self.adminrealm = adminrealm
         self.cert = cert
         self.key = key
         self.proxy = proxy
@@ -340,7 +342,7 @@ class privacyideaclient:
     def login(self):
         # we are doing a post request
         d = urllib.urlencode({"login": self.admin,
-                              "realm": "",
+                              "realm": self.adminrealm,
                               "password": self.adminpw})
         path = "/account/dologin"
 
