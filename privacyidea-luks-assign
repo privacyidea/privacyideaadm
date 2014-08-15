@@ -183,7 +183,7 @@ def main():
     if args.name is None:
         name = socket.gethostname()
     else:
-        name
+        name = args.name
 
     params = {"name": name,
               "application": "luks",
