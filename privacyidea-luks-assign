@@ -216,7 +216,7 @@ def main():
         if len(luks_key) < 40:
             raise Exception("The returned response is to small! %r" % len(luks_key))
         options = machine_values.get("options")
-        server_slot = options.get(SLOT_OPTION_KEY)
+        server_slot = options.get(SLOT_OPTION_KEY, args.luksslot)
         server_partition = options.get(PARTITION_OPTION_KEY)
         if server_slot is None:
             if slot:
@@ -249,7 +249,7 @@ def main():
         set_slot(key=luks_key,
                  slot=server_slot,
                  partition=server_partition,
-                 clear_slot=clear_slot)
+                 clear_slot=args.clearslot)
 
 
 
