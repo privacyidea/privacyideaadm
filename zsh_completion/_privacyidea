@@ -1,0 +1,145 @@
+#compdef privacyidea
+ 
+_arguments "1:command:(token user machine securitymodule config realm resolver)"
+
+_privacyidea() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    local prev=$words[CURRENT-1]
+    local prevprev=""
+    if [ CURRENT > 2 ]; then
+    	prevprev=$words[CURRENT-2]
+    fi
+
+	if compset -P '@'; then
+	    _files
+	else	
+        case $prev in
+	privacyidea|@*)
+		_arguments '*:privacyidea commands:(token\
+				user machine securitymodule config\
+				realm resolver)'
+		;;
+        token)
+	    local token; token=(
+		'list:list the tokens'
+		'init:initialize/enroll a new token'
+		'assign:assign a token to user'
+		'unassign:unassign a token from a user'
+		'disable:disable a token'
+		'enable:enable a token'
+		'remove:remove a token'
+		'resync:resynchronize a token'
+		'set:set certain parameters of the token'
+		'import:import a token file to the system'
+		'yubikey_mass_enroll:enroll Yubikeys'
+		'daplug_mass_enroll:enroll daplug tokens'
+		'etokenng_mass_enroll:enroll eToken NG OTP'
+		'-h:help'
+	    )
+	    _describe -t token 'token command' token && ret=0
+        ;;
+	config)
+    	    local config; config=(
+		'get:get the config'
+		'set:set a config value'
+		'del:delete a config value'
+		'-h:help'
+		 )
+	    _describe -t config 'config command' config && ret=0
+	;;
+	machine)
+	    local machine; machine=(
+		'create:create a new machine'
+		'delete:delete a machine'
+		'list:list all machines'
+		'gettokenapps:get all app/token assignments'
+		'showtoken:get all tokens assigned to a machine'
+		'deltoken:delete a token assignment from a machine'
+		'addoption:add an option to an assignment'
+		'-h:help'
+		)
+	    _describe -t machine 'machine command' machine && ret=0
+	;;
+	realm)
+	    local comm; comm=(
+                'get:get a realm'
+                'set:define a new realm'
+                'delete:delete a realm'
+		'-h:help'
+                'default:set a realm as default realm'
+                )
+            _describe -t realm 'realm command' comm && ret=0
+        ;;
+	resolver)
+            local comm; comm=(
+                'get:get a resolver'
+                'set:define a new resolver'
+                'delete:delete a resolver'
+		'-h:help'
+                )
+            _describe -t resolver 'resolver command' comm && ret=0
+	;;
+        user)
+            local comm; comm=(
+                '-h:help'
+                )
+            _describe -t user 'user command' comm && ret=0
+        ;;
+        securitymodule)
+            local comm; comm=(
+                '-h:help'
+                )
+            _describe -t user 'securitymodule command' comm && ret=0
+        ;;
+	-f|--file)
+            _files
+	;;
+	--type)
+		local params; params=(
+		'hmac:HOTP token, event based'
+		'totp:TOTP token, time based'
+		'pw:Password token'
+		'spass:Simple pass token'
+		'dpw:Daily changing password'
+		'ssh:SSH key token'
+		'sms:SMS token'
+		'email:email token'
+		'yubico:Yubico token in the Yubico AES mode'
+		)	
+		_describe -t type 'token type' params && ret=0
+	;;
+        esac
+
+	case $prevprev in
+	token)
+		case $prev in
+			disable|enable|assign|remove)
+				local params; params=(
+				'--serial:serial number of one token'
+				'--user:user who is tokenowner'
+				'-h:help'
+				)
+				_describe -t tokenopt 'options' params && ret=0
+			;;
+			init)
+				local params; params=(
+				'-h:help'
+		                '--user:If a user is specified, the token is directly assigned to this user.'
+		                '--serial:This is the new serial number of the token'
+		                '--description:The description of the token. This can be used to identify the token more easily.'
+		                '--pin:The OTP PIN of the token.'
+		                '--otpkey:The OTP key, like the HMAC key'
+		                '--type:The token type: {hmac,totp,pw,spass,dpw,ssh,sms,email,yubico}'
+		                '--etng:If specified, an etoken NG will be initialized'
+		                '--pytoken:If specified a python script will be created. $state'
+				)
+				_describe -t initopt 'init options' params && ret=0
+		esac
+		;;
+	esac
+	fi
+}
+ 
+_privacyidea "$@"

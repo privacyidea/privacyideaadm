@@ -2,3 +2,4 @@ doc/_build/man/privacyidea.1    usr/share/man/man1
 bash_completion/privacyidea	etc/bash_completion.d
 bash_completion/privacyidea-ssh-assign	etc/bash_completion.d
 bash_completion/privacyidea-luks-assign	etc/bash_completion.d
+zsh_completion/_privacyidea	usr/share/zsh/vendor-completions
