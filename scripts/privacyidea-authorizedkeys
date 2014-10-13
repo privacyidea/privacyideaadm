@@ -1,0 +1,122 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  privacyIDEA
+#  (c) 2014 Cornelius Kölbel, cornelius@privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''
+This tool is used to fetch the ssh public keys for 
+the given user on this machine. 
+
+This tool is to be used with the sshd_config entry
+
+ AuthorizedKeysCommand
+ 
+Run this script as the user specified in
+
+ AuthorizedKeysCommandUser.
+ 
+The settings, where the privacyIDEA server is located and which
+realm is used, is located in the file
+/etc/privacyidea/authorizedkeyscommand.
+
+You need to create the following section:
+
+   [Default]
+   url = https://privacyidea
+   admin = admin
+   adminrealm = admin
+   password = secret
+   
+'''
+
+VERSION = '1.4'
+DEBUG = False
+DESCRIPTION = __doc__
+DEFAULT_CONFIG = "/etc/privacyidea/authorizedkeyscommand" 
+
+import argparse
+import socket
+from privacyideautils.clientutils import *
+import ConfigParser
+
+
+def create_arguments():
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser.add_argument("user",
+                        help="The username of the user who is trying"
+                        "to authenticate")
+    parser.add_argument("-v", "--version",
+                        help="Print the version of the program.",
+                        action='version', version='%(prog)s ' + VERSION)
+    args = parser.parse_args()
+    return args
+
+##### main
+
+def main():
+    args = create_arguments()
+    
+    try:
+        config = ConfigParser.RawConfigParser()
+        config.read(DEFAULT_CONFIG)
+        url = config.get("Default", "url")
+        admin = config.get("Default", "admin")
+        password = config.get("Default", "password")
+        adminrealm = config.get("Default", "adminrealm")
+    except Exception as ex:
+        print "You need to provide the config file!"
+        print ex
+        sys.exit(1)
+
+    protocol = url.split(":", 1)[0]
+    host = url.split(":", 1)[1].strip("/")
+    # Create the privacyideaclient instance
+    client = privacyideaclient(protocol,
+                               host,
+                               admin=admin,
+                               adminpw=password,
+                               adminrealm=adminrealm)
+            
+    params = {"application": "ssh",
+              "name": socket.gethostname()}   
+    ret = client.connect("/machine/gettokenapps", {}, params)
+    result = ret.get("result")
+    
+    if result.get("status"):
+        value = result.get("value")
+        machines = value.get("machines")
+        for key, machine in machines.iteritems():
+            active = machine.get("is_active")
+            auth_item = machine.get("auth_item")
+            user = auth_item.get("username")
+            key = auth_item.get("sshkey")
+            serial = machine.get("serial")
+            if active and user == args.user:
+                print "%s %s" % (key, serial)
+    else:
+        print "error fetching list"
+
+
+if __name__ == '__main__':
+    if DEBUG:
+        main()
+    else:
+        try:
+            main()
+        except Exception as ex:
+            print "Error: %s" % ex
+            sys.exit(5)
