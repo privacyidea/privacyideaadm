@@ -105,7 +105,8 @@ def main():
             user = auth_item.get("username")
             key = auth_item.get("sshkey")
             serial = machine.get("serial")
-            if active and user == args.user:
+            options = machine.get("options", {})
+            if active and options.get("option_user", "root") == args.user:
                 print "%s %s" % (key, serial)
     else:
         print "error fetching list"

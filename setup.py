@@ -3,6 +3,8 @@ from distutils.core import setup
 import os
 import sys
 
+VERSION="1.5dev2"
+
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
 
@@ -19,7 +21,7 @@ def get_file_contents(file_path):
 
 
 setup(name='privacyideaadm',
-      version='1.4',
+      version=VERSION,
       description='privacyIDEA admin Client',
       author='Cornelius Kölbel',
       author_email='cornelius@privacyidea.org',
@@ -27,7 +29,8 @@ setup(name='privacyideaadm',
       packages=['privacyideautils'],
       scripts=['scripts/privacyidea',
                'scripts/privacyidea-luks-assign',
-               'scripts/privacyidea-ssh-assign'],
+               'scripts/privacyidea-ssh-assign',
+	       'scripts/privacyidea-authorizedkeys'],
       install_requires=['usb'],
       data_files=[('share/man/man1', ["doc/_build/man/privacyidea.1"])],
       license='AGPLv3',
