@@ -308,6 +308,28 @@ def listtoken(args, client):
                     'tabhead': tabhead,
                     'tabentry': tabentry})
 
+
+def listaudit(args, client):
+    param = {}
+    if args.page:
+        param["page"] = args.page
+    if args.rp:
+        param["rp"] = args.rp
+    if args.sortname:
+        param["sortname"] = args.sortname
+    if args.sortorder:
+        param["sortorder"] = args.sortorder
+    if args.query:
+        param["query"] = args.query
+    if args.qtype:
+        param["qtype"] = args.qtype
+    r1 = client.auditsearch(param)
+    rows = r1.get("rows")
+    for row in rows:
+        print row.get("cell")
+    print "Page:  ", r1.get("page")
+    print "Total: ", r1.get("total")
+    
     
 def listuser(args, client):
     r1 = client.userlist({'username': '*'})
@@ -774,6 +796,30 @@ def create_arguments():
     p_listuser = subparsers.add_parser('user',
                                        help="list the available users.")
     p_listuser.set_defaults(func=listuser)
+    
+    ################################################################
+    #
+    # audit
+    #
+    p_audit = subparsers.add_parser('audit',
+                                    help="list the audit log.")
+    p_audit.set_defaults(func=listaudit)
+    p_audit.add_argument("--page",
+                         help="The page number to view",
+                         type=int)
+    p_audit.add_argument("--rp",
+                         help="The number of entries per page",
+                         type=int)
+    p_audit.add_argument("--sortname",
+                         help="The name of the column to sort by",
+                         default="number")
+    p_audit.add_argument("--sortorder",
+                         help="The order to sort (desc, asc)",
+                         default="desc")
+    p_audit.add_argument("--query",
+                         help="A search tearm to search for")
+    p_audit.add_argument("--qtype",
+                         help="The column to search for")
     
     ################################################################
     #

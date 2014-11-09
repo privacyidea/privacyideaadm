@@ -1,9 +1,10 @@
-privacyideaadm (1.5~dev2-1) trusty; urgency=low
+privacyideaadm (1.5~dev3-1) trusty; urgency=low
 
   * add privacyidea-authorizedkeys to debian package
   * fix the username in privacyidea-authorizedkeys
+  * add "audit" to the command line modules
 
- -- Cornelius Kölbel <cornelius@privacyidea.org>  Mon, 03 Nov 2014 14:30:00 +0200
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Sun, 09 Nov 2014 16:11:00 +0200
 
 privacyideaadm (1.4-1) trusty; urgency=low
 

@@ -20,7 +20,7 @@ have privacyidea && _privacyidea() {
 		privacyidea|@*)
 			# the commands
 			case "$cur" in
-	   			*) COMPREPLY=( $( compgen -W 'token user machine securitymodule config realm resolver' -- "$cur" ))
+	   			*) COMPREPLY=( $( compgen -W 'token user machine audit securitymodule config realm resolver' -- "$cur" ))
 				;;
 			esac
 		;;

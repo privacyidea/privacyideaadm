@@ -3,7 +3,7 @@ from distutils.core import setup
 import os
 import sys
 
-VERSION="1.5dev2"
+VERSION="1.5dev3"
 
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))

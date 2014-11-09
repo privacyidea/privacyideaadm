@@ -18,7 +18,7 @@ _privacyidea() {
         case $prev in
 	privacyidea|@*)
 		_arguments '*:privacyidea commands:(token\
-				user machine securitymodule config\
+				user machine audit securitymodule config\
 				realm resolver)'
 		;;
         token)
@@ -87,6 +87,18 @@ _privacyidea() {
                 )
             _describe -t user 'user command' comm && ret=0
         ;;
+	audit)
+	    local comm; comm=(
+		'-h:help'
+		'--page:the page to display'
+		'--rp:entries per page'
+		'--sordorder:ascending or descending'
+		'--sortname:the column to sort for'
+		'--query:a search query'
+		'--qtype:the column to search in'
+		)
+	    _describe -t audit 'audit command' comm && ret=0
+	;;
         securitymodule)
             local comm; comm=(
                 '-h:help'

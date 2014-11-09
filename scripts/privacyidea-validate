@@ -1,0 +1,106 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  privacyIDEA
+#  (c) Cornelius Kölbel <cornelius@privacyidea.org>
+#  License:  AGPLv3
+#  contact:  http://www.privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+"""This is a tool to check OTP values at the command line.
+It issues a validate HTTP request against the privacyIDEA server.
+ 
+You can put parameters like the host connection definition
+into a file like 'my-connection.txt' and reference this file
+like this at the command line:
+
+   @my-connection.txt
+   
+"""
+VERSION = "1.4"
+DESCRIPTION = __doc__
+
+import argparse
+import json
+import sys
+import getpass
+from privacyideautils.clientutils import privacyideaclient
+
+
+def create_arguments():
+    parser = argparse.ArgumentParser(description=DESCRIPTION,
+                                     fromfile_prefix_chars='@')
+    parser.add_argument("-U", "--url",
+                        help="The URL of the privacyIDEA server including "
+                        "protocol and port like "
+                        "https://localhost:5001",
+                        required=True)
+    parser.add_argument("-u", "--user",
+                        help="The username of the user, who wants to"
+                        " authenticate.",
+                        default="",
+                        required=True)
+    parser.add_argument("-p", "--password",
+                        help="The password of the user, who wants to"
+                        " authenticate. If the password is omitted, "
+                        "the user is asked for the password.",
+                        default="")
+    parser.add_argument("-r", "--realm",
+                        help="The realm of the user.",
+                        default="")
+    parser.add_argument("-c", "--client",
+                        help="The client IP, from which the request "
+                        "should be originated.",
+                        default="")
+    parser.add_argument("-v", "--version",
+                        help="Print the version of the program.",
+                        action='version', version='%(prog)s ' + VERSION)
+    
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = create_arguments()
+
+    if not args.password:
+        password = getpass.getpass(prompt="Please enter password for"
+                                   " '%s':" % args.user)
+    else:
+        password = args.password
+    
+    protocol = args.url.split(":", 1)[0]
+    host = args.url.split(":", 1)[1].strip("/")
+    protocol = "https"
+    host = "localhost"
+
+    pidea = privacyideaclient(protocol,
+                              host)
+    data={"user": args.user,
+          "pass": args.password}                    
+    
+    r = pidea.connect("/validate/check", {},
+                       data=data)
+    if r.get("result").get("value"):
+        print "User %s successfully authenticated" % args.user
+        sys.exit(0)
+    else:
+        print "User %s failed to authenticate!" % args.user
+        print r
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
