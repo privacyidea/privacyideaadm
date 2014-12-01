@@ -26,6 +26,8 @@ import logging.handlers
 import cookielib
 import traceback
 import pprint
+from etokenng import (etng,
+                       etngError)
 
 if sys.version_info[0:2] >= (2, 6):
     import json

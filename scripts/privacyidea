@@ -49,14 +49,14 @@ import datetime
 import subprocess
 import getpass
 import binascii
-from privacyideautils.clientutils import showresult
-from privacyideautils.clientutils import dumpresult
-from privacyideautils.clientutils import privacyideaclient
+from privacyideautils.clientutils import (showresult,
+                                           dumpresult,
+                                           privacyideaclient,
+                                           pyToken)
 from privacyideautils.yubikey import enrollYubikey
 from privacyideautils.yubikey import YubikeyPlug
 from privacyideautils.yubikey import create_static_password
-from privacyideautils.clientutils import initetng
-from privacyideautils.clientutils import pyToken
+from privacyideautils.etokenng import initetng
 from privacyideautils.initdaplug import init_dongle
 from email.mime.text import MIMEText
 import smtplib

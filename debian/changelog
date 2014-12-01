@@ -1,8 +1,9 @@
-privacyideaadm (1.5~dev3-1) trusty; urgency=low
+privacyideaadm (1.5~dev4-1) trusty; urgency=low
 
   * add privacyidea-authorizedkeys to debian package
   * fix the username in privacyidea-authorizedkeys
   * add "audit" to the command line modules
+  * add etoken NG enrollment
 
  -- Cornelius Kölbel <cornelius@privacyidea.org>  Sun, 09 Nov 2014 16:11:00 +0200
 

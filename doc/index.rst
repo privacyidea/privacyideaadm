@@ -87,3 +87,37 @@ The file `secrets.txt` would look like this::
    admin@admin
 
 
+Enroll an eToken NG OTP under Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+You need the SafeNet Authentication Client (driver/middleware) to enroll the eToken NG.
+Please ensure, that you have installed it.
+
+.. note:: You should have administrative rights, when enrolling the eToken NG.
+
+.. note:: If you are experiencing problems like "ET_TokenInitFinal failed", you
+   should install the eToken PKI Client 5.1 SP1.
+
+Now you need to install Python for Windows 2.7.8. You can get this from
+https://www.python.org/downloads/release/.
+
+This will be installed to C:\python27 by default.
+
+You need an additional python module ``usb``, which you can get here:
+http://sourceforge.net/projects/pyusb/files/PyUSB%201.0/1.0.0-beta-2/pyusb-1.0.0b2.zip/download
+
+Please unpack it and from within the new folder issue the following commands::
+   
+   c:\python27\python setup.py build
+   c:\python27\python setup.py install
+
+Now you need to unpack the latest privacyideaadm package and also install it via the
+same commands `setup.py build` and `install` as above.
+
+The scripts are installed to `C:\python27\scripts`.
+
+Now you can start the command line client to enroll eToken NG::
+
+   c:\python27\python c:\python27\python\scripts\privacyidea \
+   -U https://server
+   -a admin@admin token etokenng_mass_enroll
+

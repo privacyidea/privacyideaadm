@@ -4,6 +4,7 @@ setup.py
 doc/_build/man/privacyidea.1
 privacyideautils/__init__.py
 privacyideautils/clientutils.py
+privacyideautils/etokenng.py
 privacyideautils/initdaplug.py
 privacyideautils/pytoken-totp.py
 privacyideautils/pytoken.template.py
