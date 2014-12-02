@@ -5,8 +5,8 @@ info:
 	@echo "ppa		-- upload to ppa release repo"
 	@echo "man		-- make the manpage"
 
-VERSION=1.5~dev4
-#VERSION=1.4
+#VERSION=1.5~dev4
+VERSION=1.5
 
 pypi:
 	make man
