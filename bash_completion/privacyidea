@@ -29,14 +29,14 @@ have privacyidea && _privacyidea() {
 			case "$cur" in
 				*) COMPREPLY=( $( compgen -W 'list init yubikey_mass_enroll daplug_mass_enroll \
 								etokenng_mass_enroll assign unassign import \
-    								disable enable remove resync set' -- "$cur" ))
+    								disable enable delete resync set' -- "$cur" ))
 				;;
 			esac
 		;;
 		config)
 			# subcommands for config
 			case "$cur" in 
-				*) COMPREPLY=( $( compgen -W 'get set del' -- "$cur" ))
+				*) COMPREPLY=( $( compgen -W 'get set delete' -- "$cur" ))
 				;;
 			esac
 		;;
@@ -60,7 +60,7 @@ have privacyidea && _privacyidea() {
 	# The attributes of the token subcommand
 	token)
 		case "$prev" in
-			disable|enable|assign|remove)
+			disable|enable|assign|delete)
 				COMPREPLY=( $( compgen -W '--serial --user -h' -- "$cur" ))
 			;;
 			import)

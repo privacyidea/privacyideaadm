@@ -29,7 +29,7 @@ _privacyidea() {
 		'unassign:unassign a token from a user'
 		'disable:disable a token'
 		'enable:enable a token'
-		'remove:remove a token'
+		'delete:delete a token'
 		'resync:resynchronize a token'
 		'set:set certain parameters of the token'
 		'import:import a token file to the system'
@@ -44,7 +44,7 @@ _privacyidea() {
     	    local config; config=(
 		'get:get the config'
 		'set:set a config value'
-		'del:delete a config value'
+		'delete:delete a config value'
 		'-h:help'
 		 )
 	    _describe -t config 'config command' config && ret=0
@@ -110,7 +110,7 @@ _privacyidea() {
 	;;
 	--type)
 		local params; params=(
-		'hmac:HOTP token, event based'
+		'hotp:HOTP token, event based'
 		'totp:TOTP token, time based'
 		'pw:Password token'
 		'spass:Simple pass token'
@@ -145,7 +145,6 @@ _privacyidea() {
 		                '--otpkey:The OTP key, like the HMAC key'
 		                '--type:The token type: {hmac,totp,pw,spass,dpw,ssh,sms,email,yubico}'
 		                '--etng:If specified, an etoken NG will be initialized'
-		                '--pytoken:If specified a python script will be created. $state'
 				)
 				_describe -t initopt 'init options' params && ret=0
 		esac

@@ -61,7 +61,7 @@ class TestClientUtils(unittest.TestCase):
         result = response.data.get("result")
         value = result.get("value")
         self.assertTrue(result.get("status") is True, result)
-        self.assertTrue(value.get("count") == 1, value)
+        self.assertTrue(value.get("count") >= 1, value)
         self.assertTrue(value.get("tokens")[0].get("serial") == self.serial1,
                         value)
         self.assertTrue(value.get("tokens")[0].get("active") is True,
@@ -113,27 +113,21 @@ class TestClientUtils(unittest.TestCase):
 
     def test_04_get_setresolver(self):
 
-        # missing parameter "resolver" raises client error
-        self.assertRaises(PrivacyIDEAClientError, self.client.setresolver, {})
-
         # missing type raises client error
         self.assertRaises(PrivacyIDEAClientError, self.client.setresolver,
-                          {"resolver": self.reso1})
+                          self.reso1, {})
 
         # unknown resolver type
         self.assertRaises(PrivacyIDEAClientError, self.client.setresolver,
-                          {"resolver": self.reso1,
-                           "type": "unknown"})
+                          self.reso1, {"type": "unknown"})
 
         # missing rf_file for passwd raises errir
         self.assertRaises(PrivacyIDEAClientError, self.client.setresolver,
-                          {"resolver": self.reso1,
-                           "type": "passwd"})
+                          self.reso1, {"type": "passwd"})
 
         # set the resolver as a passwd resolver
-        response = self.client.setresolver({"resolver": self.reso1,
-                                            "type": "passwd",
-                                            "filename": PWFILE})
+        response = self.client.setresolver(self.reso1, {"type": "passwd",
+                                                        "filename": PWFILE})
         self.assertTrue(response.status == 200, response)
         result = response.data.get("result")
         value = result.get("value")
@@ -168,9 +162,8 @@ class TestClientUtils(unittest.TestCase):
 
     def test_05_create_a_realm(self):
         # set the resolver as a passwd resolver
-        response = self.client.setresolver({"resolver": self.reso1,
-                                            "type": "passwd",
-                                            "filename": PWFILE})
+        response = self.client.setresolver(self.reso1, {"type": "passwd",
+                                                        "filename": PWFILE})
         self.assertTrue(response.status == 200, response)
         result = response.data.get("result")
         value = result.get("value")

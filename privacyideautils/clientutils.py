@@ -219,6 +219,9 @@ class privacyideaclient(object):
     def setconfig(self, param):
         return self.post('/system/setConfig', param)
 
+    def deleteconfig(self, key):
+        return self.delete('/system/%s' % key)
+
     def getrealms(self):
         return self.get('/realm/')
 
@@ -237,15 +240,8 @@ class privacyideaclient(object):
     def deletedefaultrealm(self):
         return self.delete('/defaultrealm')
 
-    def deleteconfig(self, key):
-        return self.delete('/system/%s' % key)
-
-    def setresolver(self, param):
+    def setresolver(self, resolver, param):
         response = None
-        if 'resolver' not in param:
-            raise PrivacyIDEAClientError(1201, _("When setting a resolver, "
-                                                  "you need to specify"
-                                                  "'resolver'."))
         if 'type' not in param:
             raise PrivacyIDEAClientError(1202, _("When setting a resolver, "
                                                   "you need to specify "
@@ -257,7 +253,7 @@ class privacyideaclient(object):
                                                      "file resolver, you need"
                                                      "to specify 'filename'."))
 
-            response = self.post('/resolver/%s' % param.get("resolver"), param)
+            response = self.post('/resolver/%s' % resolver, param)
 
         elif param['type'].lower() == 'ldap':
             raise NotImplementedError("TODO: Doing the Voodoo to set all "

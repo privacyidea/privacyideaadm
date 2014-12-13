@@ -38,7 +38,7 @@ like this at the command line:
    
 Thus you can avoid exposing secret credentials.
 """
-VERSION = "1.3"
+VERSION = "2.0"
 KNOWN_APPS = ["ssh", "luks"]
 DESCRIPTION = __doc__
 
@@ -51,8 +51,7 @@ import getpass
 import binascii
 from privacyideautils.clientutils import (showresult,
                                            dumpresult,
-                                           privacyideaclient,
-                                           pyToken)
+                                           privacyideaclient)
 from privacyideautils.yubikey import enrollYubikey
 from privacyideautils.yubikey import YubikeyPlug
 from privacyideautils.yubikey import create_static_password
@@ -274,7 +273,8 @@ def listtoken(args, client):
         param['outform'] = 'csv'
         if args.export_fields:
             param['user_fields'] = args.export_fields
-        r1 = client.connect('/admin/show', {}, param, json_format=False)
+        resp = client.listtoken(param)
+        r1 = resp.data
         if args.mail_host and args.mail_to:
             sendmail(args, r1)
         if args.cifs_server and args.cifs_user and args.cifs_password:
@@ -311,7 +311,8 @@ def listaudit(args, client):
     
     
 def listuser(args, client):
-    r1 = client.userlist({'username': '*'})
+    resp = client.userlist({'username': '*'})
+    r1 = resp.data
     result = r1['result']
     tabentry = ['username',
                 'surname',
@@ -357,33 +358,7 @@ def inittoken(args, client):
         param['sopin'] = tdata['sopin']
         print("FIXME: what shall we do with the eToken password and "
               "SO PIN: ", tdata['userpin'], tdata['sopin'])
-    elif args.pytoken:
-        if not args.user:
-            print "To initialize a pyToken, please provide a username"
-            sys.exit(1)
-        pyTemplate = "FAIL"
-        pyTemplateList = ('pytoken.template.py',
-                          "/usr/share/pyshared/privacyideautils/"
-                          "pytoken.template.py",
-                          "/usr/local/lib/python2.6/dist-packages/"
-                          "privacyideautils/pytoken.template.py",
-                          "/usr/lib/python2.6/dist-packages/"
-                          "privacyideautils/pytoken.template.py",
-                          )
-        for pT in pyTemplateList:
-            if os.path.isfile(pT):
-                pyTemplate = pT
-                break
-        if pyTemplate == "FAIL":
-            print "Could not find any pytoken template!"
-            sys.exit(1)
-        else:
-            pyTok = pyToken(keylen=256, template=pyTemplate)
-            pyTokenfile = pyTok.createToken(param['user'])
-            param['otpkey'] = pyTok.getHMAC()
-            param['serial'] = pyTok.getSerial()
-            print pyTokenfile
-                    
+
     resp = client.inittoken(param)
     print resp.status
     showresult(resp.data)
@@ -485,13 +460,8 @@ def enabletoken(args, client):
     showresult(response.data)
 
 
-def removetoken(args, client):
-    param = {}
-    if args.serial:
-        param["serial"] = args.serial
-    if args.user:
-        param["user"] = args.user
-    response = client.removetoken(param)
+def deletetoken(args, client):
+    response = client.deletetoken(args.serial)
     showresult(response.data)
 
 
@@ -550,6 +520,7 @@ def settoken(args, client):
 
 
 def createmachine(args, client):
+    # TODO: Migration
     response = client.connect("/machine/create", {}, {"name": args.name,
                                                       "ip": args.ip,
                                                       "desc":
@@ -559,6 +530,7 @@ def createmachine(args, client):
 
 
 def deletemachine(args, client):
+    # TODO: Migration
     ret = client.connect("/machine/delete",
                          {},
                          {"name": args.name})
@@ -566,6 +538,7 @@ def deletemachine(args, client):
 
 
 def showmachine(args, client):
+    # TODO: Migration
     param = {}
     if args.name:
         param["name"] = args.name
@@ -576,6 +549,7 @@ def showmachine(args, client):
 
 
 def gettokenapps(args, client):
+    # TODO: Migration
     param = {}
     if args.name:
         param["name"] = args.name
@@ -593,6 +567,7 @@ def gettokenapps(args, client):
 
 
 def machine_addtoken(args, client):
+    # TODO: Migration
     param = {"name": args.name,
              "serial": args.serial,
              "application": args.app}
@@ -609,6 +584,7 @@ def machine_addtoken(args, client):
 
 
 def machine_showtoken(args, client):
+    # TODO: Migration
     param = {}
     if args.name:
         param["name"] = args.name
@@ -623,6 +599,7 @@ def machine_showtoken(args, client):
 
 
 def machine_deltoken(args, client):
+    # TODO: Migration
     ret = client.connect("/machine/deltoken",
                          {},
                          {"name": args.name,
@@ -632,6 +609,7 @@ def machine_deltoken(args, client):
 
 
 def machine_addoption(args, client):
+    # TODO: Migration
     param = {"name": args.name,
              "serial": args.serial,
              "application": args.app}
@@ -644,6 +622,7 @@ def machine_addoption(args, client):
 
 
 def machine_deloption(args, client):
+    # TODO: Migration
     param = {"name": args.name,
              "serial": args.serial,
              "application": args.app}
@@ -657,41 +636,43 @@ def machine_deloption(args, client):
 
 
 def getrealms(args, client):
-    response = client.getrealms({})
+    response = client.getrealms()
     showresult(response.data)
 
 
 def setrealm(args, client):
     param = {}
-    param["realm"] = args.realm
     param['resolvers'] = ",".join(args.resolver)
-    response = client.setrealm(param)
+    response = client.setrealm(args.realm, param)
     showresult(response.data)
 
 
 def deleterealm(args, client):
-    response = client.deleterealm({"realm": args.realm})
+    response = client.deleterealm(args.realm)
     showresult(response.data)
 
 
 def setdefaultrealm(args, client):
-    response = client.setdefaultrealm({"realm": args.realm})
+    response = client.setdefaultrealm(args.realm)
     showresult(response.data)
 
 
 def getresolvers(args, client):
-    response = client.getresolvers({})
+    response = client.getresolver({})
     showresult(response.data)
 
 
 def deleteresolver(args, client):
-    response = client.deleteresolver({"resolver": args.resolver})
+    response = client.deleteresolver(args.resolver)
     showresult(response.data)
 
 
-def setresolver(args):
-    # TODO. We should add another parser layer for each type!
-    pass
+def setresolver(args, client):
+    if args.type.lower() == "passwd":
+        response =  client.setresolver(args.resolver, {"type": args.type,
+                                                       "filename":
+                                                          args.filename})
+    showresult(response.data)
 
 
 def securitymodule(args, client):
@@ -710,7 +691,7 @@ def securitymodule(args, client):
 
 
 def get_config(args, client):
-    response = client.readserverconfig({})
+    response = client.getconfig({})
     showresult(response.data)
 
 
@@ -718,17 +699,14 @@ def set_config(args, client):
     for config in args.config:
         param = {}
         (k, v) = config.split("=")
-        param["key"] = k
-        param["value"] = v
-        response = client.writeserverconfig(param)
-        showresult(response.data)
+        param[k] = v
+    response = client.setconfig(param)
+    showresult(response.data)
 
 
 def del_config(args, client):
     for k in args.key:
-        param = {}
-        param["key"] = k
-        response = client.deleteconfig(param)
+        response = client.deleteconfig(k)
         showresult(response.data)
 
 
@@ -860,10 +838,7 @@ def create_arguments():
                              default="hotp")
     p_inittoken.add_argument("--etng", help="If specified, an etoken NG will "
                              "be initialized", action="store_true")
-    p_inittoken.add_argument("--pytoken", help="If specified a python script "
-                             "will be created.",
-                             action="store_true")
-    
+
     # yubikey_mass_enroll
     p_ykmass = token_sub.add_parser("yubikey_mass_enroll",
                                     help="Initialize a bunch of yubikeys")
@@ -968,14 +943,14 @@ def create_arguments():
                           "be enabled")
     
     # removetoken
-    p_remove = token_sub.add_parser("remove",
-                                    help="Remove token by serial or by user")
-    p_remove.set_defaults(func=removetoken)
+    p_remove = token_sub.add_parser("delete",
+                                    help="Delete token by serial or by user")
+    p_remove.set_defaults(func=deletetoken)
     p_remove.add_argument("--serial",
                           help="serial number of the token to remove")
     p_remove.add_argument("--user",
                           help="The username of the user, whose tokens should "
-                          "be removed")
+                          "be deleted")
     
     # resynctoken
     p_resync = token_sub.add_parser("resync",
@@ -1242,7 +1217,7 @@ def create_arguments():
                              "You can use several --config arguments.")
     
     # delconfig
-    p_delconfig = config_sub.add_parser("del",
+    p_delconfig = config_sub.add_parser("delete",
                                         help="delete a configuration value of "
                                         "the privacyIDEA server.")
     p_delconfig.set_defaults(func=del_config)
@@ -1307,9 +1282,10 @@ def create_arguments():
     p_setresolver.add_argument("--resolver", required=True,
                                help="The name of the new resolver.")
     p_setresolver.add_argument("--type", required=True,
-                               choices=["LDAP", "SQL", "FILE", "SCIM"],
+                               choices=["LDAP", "SQL", "PASSWD", "SCIM"],
                                help="The type of the new resolver")
-    # TODO: all options for the resolvers!
+    p_setresolver.add_argument("--filename",
+                               help="The filename for Passwdresolvers")
     
     # delete
     p_deleteresolver = resolver_sub.add_parser("delete",
