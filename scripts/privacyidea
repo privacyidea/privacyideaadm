@@ -280,33 +280,12 @@ def listtoken(args, client):
         if args.cifs_server and args.cifs_user and args.cifs_password:
             cifs_push(args, r1)
     else:
-        r1 = client.listtoken(param)
-        result = r1['result']
-
-        tabsize = [4, 16, 14, 20, 20, 4, 4, 4, 4]
-        tabstr = ["%4s", "%16s", "%14s", "%20s", "%20s",
-                  "%4s", "%4s", "%4s", "%4s", "%4s"]
-        tabdelim = '|'
-        tabvisible = [0, 1, 2, 3, 4, 5, 6, 7, 8]
-        tabhead = ['Id', 'Desc', 'S/N', 'User', 'Resolver',
-                   'MaxFail', 'Active', 'FailCount', 'Window']
-        tabentry = ['privacyIDEA.TokenId',
-                    'privacyIDEA.TokenDesc',
-                    'privacyIDEA.TokenSerialnumber',
-                    'User.username',
-                    'privacyIDEA.IdResClass',
-                    'privacyIDEA.MaxFail',
-                    'privacyIDEA.Isactive',
-                    'privacyIDEA.FailCount',
-                    'privacyIDEA.SyncWindow']
-        dumpresult(result['status'],
-                   result['value']['data'],
-                   {'tabsize': tabsize,
-                    'tabstr': tabstr,
-                    'tabdelim': tabdelim,
-                    'tabvisible': tabvisible,
-                    'tabhead': tabhead,
-                    'tabentry': tabentry})
+        resp = client.listtoken(param)
+        if resp.status == 200:
+            r1 = resp.data
+            result = r1['result']
+            dumpresult(result['status'],
+                       result['value']['tokens'])
 
 
 def listaudit(args, client):
@@ -405,8 +384,9 @@ def inittoken(args, client):
             param['serial'] = pyTok.getSerial()
             print pyTokenfile
                     
-    r1 = client.inittoken(param)
-    showresult(r1)
+    resp = client.inittoken(param)
+    print resp.status
+    showresult(resp.data)
 
 
 def yubikey_mass_enroll(args, client):
@@ -470,19 +450,19 @@ def assigntoken(args, client):
     param = {}
     param["user"] = args.user
     param["serial"] = args.serial
-    r1 = client.assigntoken(param)
-    showresult(r1)
+    response = client.assigntoken(param)
+    showresult(response.data)
 
 
 def unassigntoken(args, client):
-    r1 = client.unassigntoken({"serial": args.serial})
-    showresult(r1)
+    response = client.unassigntoken({"serial": args.serial})
+    showresult(response.data)
 
 
 def importtoken(args, client):
     print args
-    r1 = client.importtoken({'file': args.file})
-    showresult(r1)
+    response = client.importtoken({'file': args.file})
+    showresult(response.data)
 
 
 def disabletoken(args, client):
@@ -491,8 +471,8 @@ def disabletoken(args, client):
         param["serial"] = args.serial
     if args.user:
         param["user"] = args.user
-    r1 = client.disabletoken(param)
-    showresult(r1)
+    response = client.disabletoken(param)
+    showresult(response.data)
 
 
 def enabletoken(args, client):
@@ -501,8 +481,8 @@ def enabletoken(args, client):
         param["serial"] = args.serial
     if args.user:
         param["user"] = args.user
-    r1 = client.enabletoken(param)
-    showresult(r1)
+    response = client.enabletoken(param)
+    showresult(response.data)
 
 
 def removetoken(args, client):
@@ -511,8 +491,8 @@ def removetoken(args, client):
         param["serial"] = args.serial
     if args.user:
         param["user"] = args.user
-    r1 = client.removetoken(param)
-    showresult(r1)
+    response = client.removetoken(param)
+    showresult(response.data)
 
 
 def resynctoken(args, client):
@@ -520,8 +500,8 @@ def resynctoken(args, client):
     param["serial"] = args.serial
     param["otp1"] = args.otp1
     param["otp2"] = args.otp2
-    r1 = client.removetoken(param)
-    showresult(r1)
+    response = client.removetoken(param)
+    showresult(response.data)
 
 
 def settoken(args, client):
@@ -565,17 +545,17 @@ def settoken(args, client):
     if args.phone:
         param["phone"] = args.phone
         
-    r1 = client.set(param)
-    showresult(r1)
+    response = client.set(param)
+    showresult(response.data)
 
 
 def createmachine(args, client):
-    ret = client.connect("/machine/create",
-                         {},
-                         {"name": args.name,
-                          "ip": args.ip,
-                          "desc": args.description or ""})
-    showresult(ret)
+    response = client.connect("/machine/create", {}, {"name": args.name,
+                                                      "ip": args.ip,
+                                                      "desc":
+                                                          args.description
+                                                          or ""})
+    showresult(response.data)
 
 
 def deletemachine(args, client):
@@ -677,40 +657,40 @@ def machine_deloption(args, client):
 
 
 def getrealms(args, client):
-    r1 = client.getrealms({})
-    showresult(r1)
+    response = client.getrealms({})
+    showresult(response.data)
 
 
 def setrealm(args, client):
     param = {}
     param["realm"] = args.realm
     param['resolvers'] = ",".join(args.resolver)
-    r1 = client.setrealm(param)
-    showresult(r1)
+    response = client.setrealm(param)
+    showresult(response.data)
 
 
 def deleterealm(args, client):
-    r1 = client.deleterealm({"realm": args.realm})
-    showresult(r1)
+    response = client.deleterealm({"realm": args.realm})
+    showresult(response.data)
 
 
 def setdefaultrealm(args, client):
-    r1 = client.setdefaultrealm({"realm": args.realm})
-    showresult(r1)
+    response = client.setdefaultrealm({"realm": args.realm})
+    showresult(response.data)
 
 
 def getresolvers(args, client):
-    r1 = client.getresolvers({})
-    showresult(r1)
+    response = client.getresolvers({})
+    showresult(response.data)
 
 
 def deleteresolver(args, client):
-    r1 = client.deleteresolver({"resolver": args.resolver})
-    showresult(r1)
+    response = client.deleteresolver({"resolver": args.resolver})
+    showresult(response.data)
 
 
 def setresolver(args):
-    # TODO. We should add a nother parser layer for each type!
+    # TODO. We should add another parser layer for each type!
     pass
 
 
@@ -730,8 +710,8 @@ def securitymodule(args, client):
 
 
 def get_config(args, client):
-    r1 = client.readserverconfig({})
-    showresult(r1)
+    response = client.readserverconfig({})
+    showresult(response.data)
 
 
 def set_config(args, client):
@@ -740,16 +720,16 @@ def set_config(args, client):
         (k, v) = config.split("=")
         param["key"] = k
         param["value"] = v
-        r1 = client.writeserverconfig(param)
-        showresult(r1)
+        response = client.writeserverconfig(param)
+        showresult(response.data)
 
 
 def del_config(args, client):
     for k in args.key:
         param = {}
         param["key"] = k
-        r1 = client.deleteconfig(param)
-        showresult(r1)
+        response = client.deleteconfig(param)
+        showresult(response.data)
 
 
 def create_arguments():
@@ -875,9 +855,9 @@ def create_arguments():
     p_inittoken.add_argument("--pin", help="The OTP PIN of the token.")
     p_inittoken.add_argument("--otpkey", help="The OTP key, like the HMAC key")
     p_inittoken.add_argument("--type", help="The token type",
-                             choices=["hmac", "totp", "pw", "spass", "dpw",
+                             choices=["hotp", "totp", "pw", "spass", "dpw",
                                       "ssh", "sms", "email", "yubico"],
-                             default="hmac")
+                             default="hotp")
     p_inittoken.add_argument("--etng", help="If specified, an etoken NG will "
                              "be initialized", action="store_true")
     p_inittoken.add_argument("--pytoken", help="If specified a python script "
@@ -1351,14 +1331,10 @@ def main():
     else:
         password = args.password
 
-    protocol = args.url.split(":", 1)[0]
-    host = args.url.split(":", 1)[1].strip("/")
     # Create the privacyideaclient instance
-    client = privacyideaclient(protocol,
-                               host,
-                               admin=args.admin,
-                               adminpw=password,
-                               adminrealm=args.adminrealm)
+    client = privacyideaclient(args.admin,
+                               password,
+                               args.url)
     args.func(args, client)
 
 

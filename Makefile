@@ -4,9 +4,10 @@ info:
 	@echo "ppa-dev          -- upload to ppa development repo"
 	@echo "ppa		-- upload to ppa release repo"
 	@echo "man		-- make the manpage"
+	@echo "test		-- run tests"
 
 #VERSION=1.5~dev4
-VERSION=1.5
+VERSION=2.0
 
 pypi:
 	make man
@@ -44,3 +45,8 @@ ppa:
 	make debianize
 	(cd DEBUILD/privacyideaadm.org; debuild -S)
 	dput ppa:privacyidea/privacyidea DEBUILD/privacyideaadm_${VERSION}-?_source.changes
+
+test:
+	rm .coverage
+	nosetests -v --with-coverage --cover-package=privacyideautils --cover-html tests/test_clientutils.py
+

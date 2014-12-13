@@ -123,10 +123,6 @@ class etngError(Exception):
     def __init__(self, id=10, description="etngError"):
         self.id = id
         self.description = description
-    def getId(self):
-        return self.id
-    def getDescription(self):
-        return self.description
 
     def __str__(self):
         ## here we lookup the error id - to translate
