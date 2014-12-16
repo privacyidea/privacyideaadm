@@ -39,7 +39,6 @@ _ = gettext.gettext
 TIMEOUT = 5
 etng = False
 
-
 file_opts = ['rf_file=']
 ldap_opts = ['rl_uri=', 'rl_basedn=', 'rl_binddn=',
              'rl_bindpw=', 'rl_timeout=', 'rl_loginattr=',
@@ -93,15 +92,20 @@ class privacyideaclient(object):
     request.
     """
 
-    def __init__(self, username, password, baseuri="http://localhost:5000"):
+    def __init__(self, username, password, baseuri="http://localhost:5000",
+                 verify_ssl=True):
         """
         :param baseuri: The base of the server like http://localhost:5000
         :type baseuri: basestring
         """
         self.auth_token = None
         self.baseuri = baseuri
-        self.set_credentials(username, password)
         self.log = logging.getLogger('privacyideaclient')
+        self.verify_ssl = verify_ssl
+        # TODO:
+        self.verify_ssl = False
+        # Do the first server communication and retrieve the auth token
+        self.set_credentials(username, password)
 
     def _send_response(self, r):
         if r.status_code >= 300:
@@ -124,8 +128,9 @@ class privacyideaclient(object):
         :return: None
         """
         r = requests.post("%s/auth" % self.baseuri,
-                          data={"username":"username",
-                                "password": "password"})
+                          data={"username": username,
+                                "password": password},
+                          verify=self.verify_ssl)
 
         if r.status_code == requests.codes.ok:
             res = r.json()
@@ -136,19 +141,22 @@ class privacyideaclient(object):
     def get(self, uripath, param=None):
         r = requests.get("%s%s" % (self.baseuri, uripath),
                          headers={"Authorization": self.auth_token},
-                         params=param)
+                         params=param,
+                         verify=self.verify_ssl)
         return self._send_response(r)
 
 
     def post(self, uripath, param=None):
         r = requests.post("%s%s" % (self.baseuri, uripath),
                           headers={"Authorization": self.auth_token},
-                          data=param)
+                          data=param,
+                          verify=self.verify_ssl)
         return self._send_response(r)
 
     def delete(self, uripath):
         r = requests.delete("%s%s" % (self.baseuri, uripath),
-                            headers={"Authorization": self.auth_token})
+                            headers={"Authorization": self.auth_token},
+                            verify=self.verify_ssl)
         return self._send_response(r)
 
     def userlist(self, param):
