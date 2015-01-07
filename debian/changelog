@@ -1,3 +1,9 @@
+privacyideaadm (2.0~dev1) trusty; urgency=low
+
+  * migration to flask
+
+ -- Corneluis Kölbel <cornelius@privacyidea.org>  Fri, 26 Dec 2014 22:50:00 +0200
+
 privacyideaadm (1.5-1) trusty; urgency=low
 
   * add privacyidea-authorizedkeys to debian package
