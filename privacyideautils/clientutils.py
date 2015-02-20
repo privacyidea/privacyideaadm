@@ -137,6 +137,8 @@ class privacyideaclient(object):
             result = res.get("result")
             if result.get("status") is True:
                 self.auth_token = result.get("value", {}).get("token")
+        else:
+            raise Exception("Invalid Credentials: %s" % r.status_code)
 
     def get(self, uripath, param=None):
         r = requests.get("%s%s" % (self.baseuri, uripath),
