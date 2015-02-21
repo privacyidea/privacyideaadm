@@ -1,8 +1,8 @@
-privacyideaadm (2.0~dev1) trusty; urgency=low
+privacyideaadm (2.0-1) trusty; urgency=low
 
   * migration to flask
 
- -- Cornelius Kölbel <cornelius@privacyidea.org>  Fri, 20 Feb 2015 18:50:00 +0200
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Sat, 21 Feb 2015 14:30:00 +0200
 
 privacyideaadm (1.5-1) trusty; urgency=low
 

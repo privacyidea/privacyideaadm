@@ -7,7 +7,7 @@ info:
 	@echo "test		-- run tests"
 
 #VERSION=1.5~dev4
-VERSION=2.0~dev1
+VERSION=2.0
 
 pypi:
 	make man
@@ -39,12 +39,12 @@ ppa-dev:
 	make debianize
 	(cd DEBUILD/privacyideaadm.org; debuild -S)
 	# Upload to launchpad:
-	dput ppa:privacyidea/privacyidea-dev DEBUILD/privacyideaadm_${VERSION}_source.changes
+	dput ppa:privacyidea/privacyidea-dev DEBUILD/privacyideaadm_${VERSION}-*_source.changes
 
 ppa:
 	make debianize
 	(cd DEBUILD/privacyideaadm.org; debuild -S)
-	dput ppa:privacyidea/privacyidea DEBUILD/privacyideaadm_${VERSION}_source.changes
+	dput ppa:privacyidea/privacyidea DEBUILD/privacyideaadm_${VERSION}-*_source.changes
 
 test:
 	rm .coverage
