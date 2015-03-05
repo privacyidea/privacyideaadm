@@ -65,6 +65,9 @@ def create_arguments():
     parser.add_argument("-v", "--version",
                         help="Print the version of the program.",
                         action='version', version='%(prog)s ' + VERSION)
+    parser.add_argument("--nosslcheck",
+                        help="Do not check SSL certificates.",
+                        action="store_true")
     args = parser.parse_args()
     return args
 
@@ -83,10 +86,9 @@ def main():
         print ex
         sys.exit(1)
 
-    protocol = url.split(":", 1)[0]
-    host = url.split(":", 1)[1].strip("/")
     # Create the privacyideaclient instance
-    client = privacyideaclient(admin, password, url)
+    client = privacyideaclient(admin, password, url,
+                               no_ssl_check=args.nosslcheck)
     params = {"hostname": socket.gethostname()}
     response = client.get("/machine/authitem/ssh", params)
     result = response.data.get("result")

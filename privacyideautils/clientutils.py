@@ -83,7 +83,7 @@ class privacyideaclient(object):
     """
 
     def __init__(self, username, password, baseuri="http://localhost:5000",
-                 verify_ssl=True):
+                 no_ssl_check=False):
         """
         :param baseuri: The base of the server like http://localhost:5000
         :type baseuri: basestring
@@ -91,7 +91,7 @@ class privacyideaclient(object):
         self.auth_token = None
         self.baseuri = baseuri
         self.log = logging.getLogger('privacyideaclient')
-        self.verify_ssl = verify_ssl
+        self.verify_ssl = not no_ssl_check
         # Do the first server communication and retrieve the auth token
         self.set_credentials(username, password)
 

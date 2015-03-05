@@ -47,6 +47,10 @@ OPTIONS
                         second line the password itself and add this to the
                         command line with @password.txt
   -v, --version         Print the version of the program.
+  --nosslcheck          The ssl certificate is not checked.
+                        **Only use this, if you know what you are doing**.
+                        You should use an SSL certificate from a **really**
+                        trusted CA.
 
 COMMANDS
 --------

@@ -38,8 +38,6 @@ import sys
 import time
 import argparse
 
-SLOT_OPTION_KEY = "option_slot"
-PARTITION_OPTION_KEY = "option_partition"
 DELAY = 2
 
 
@@ -148,6 +146,9 @@ def create_arguments():
     parser.add_argument("--clearslot",
                         help="If the slot is populated, overwrite it!",
                         action="store_true")
+    parser.add_argument("--nosslcheck",
+                        help="Do not check SSL certificates.",
+                        action="store_true")
     args = parser.parse_args()
     return args
 
@@ -163,7 +164,8 @@ def main():
         password = args.password
 
     # Create the privacyideaclient instance
-    client = privacyideaclient(args.admin, password, args.url)
+    client = privacyideaclient(args.admin, password, args.url,
+                               no_ssl_check=args.nosslcheck)
 
     if args.lukspassword is None:
         lukspassword = getpass.getpass("Yubikey password for LUKS slot:")

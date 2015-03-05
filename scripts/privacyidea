@@ -718,6 +718,9 @@ def create_arguments():
     parser.add_argument("-v", "--version",
                         help="Print the version of the program.",
                         action='version', version='%(prog)s ' + VERSION)
+    parser.add_argument("--nosslcheck",
+                        help="Do not check SSL certificates.",
+                        action="store_true")
     
     subparsers = parser.add_subparsers(help="The available commands. Running "
                                        "<command> -h will give you a detailed "
@@ -1284,7 +1287,8 @@ def main():
     # Create the privacyideaclient instance
     client = privacyideaclient(args.admin,
                                password,
-                               args.url)
+                               args.url,
+                               no_ssl_check=args.nosslcheck)
     args.func(args, client)
 
 

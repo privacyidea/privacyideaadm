@@ -66,6 +66,9 @@ def create_arguments():
     parser.add_argument("-v", "--version",
                         help="Print the version of the program.",
                         action='version', version='%(prog)s ' + VERSION)
+    parser.add_argument("--nosslcheck",
+                        help="Do not check SSL certificates.",
+                        action="store_true")
     
     args = parser.parse_args()
     return args
@@ -87,7 +90,8 @@ def main():
     if args.client:
         data["client"] = args.client
 
-    response = requests.post(args.url + "/validate/check", data=data)
+    response = requests.post(args.url + "/validate/check", data=data,
+                             verify=not args.nosslcheck)
 
     json_response = response.json()
     result = json_response.get("result")
