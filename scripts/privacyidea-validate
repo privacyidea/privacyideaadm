@@ -29,14 +29,13 @@ like this at the command line:
    @my-connection.txt
    
 """
-VERSION = "1.4"
+VERSION = "2.1"
 DESCRIPTION = __doc__
 
 import argparse
-import json
 import sys
 import getpass
-from privacyideautils.clientutils import privacyideaclient
+import requests
 
 
 def create_arguments():
@@ -80,27 +79,28 @@ def main():
                                    " '%s':" % args.user)
     else:
         password = args.password
-    
-    protocol = args.url.split(":", 1)[0]
-    host = args.url.split(":", 1)[1].strip("/")
-    protocol = "https"
-    host = "localhost"
-
-    pidea = privacyideaclient(protocol,
-                              host)
     data={"user": args.user,
-          "pass": args.password}                    
-    
-    r = pidea.connect("/validate/check", {},
-                       data=data)
-    if r.get("result").get("value"):
-        print "User %s successfully authenticated" % args.user
-        sys.exit(0)
-    else:
-        print "User %s failed to authenticate!" % args.user
-        print r
-        sys.exit(1)
+          "pass": args.password}
+    if args.realm:
+        data["realm"] = args.realm
 
+    if args.client:
+        data["client"] = args.client
+
+    response = requests.post(args.url + "/validate/check", data=data)
+
+    json_response = response.json()
+    result = json_response.get("result")
+
+    if result.get("status"):
+        if result.get("value"):
+            print "User %s successfully authenticated" % args.user
+            sys.exit(0)
+        else:
+            print "User %s failed to authenticate!" % args.user
+            sys.exit(1)
+    else:
+        print result.get("error").get("message")
 
 if __name__ == '__main__':
     main()

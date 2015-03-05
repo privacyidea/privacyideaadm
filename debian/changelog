@@ -1,3 +1,9 @@
+privacyideaadm (2.1~dev1-1) trusty; urgency=low
+
+  * Integrating the Machine Authentication Items
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Thu, 05 Mar 2015 10:10:00 +0200
+
 privacyideaadm (2.0-1) trusty; urgency=low
 
   * migration to flask

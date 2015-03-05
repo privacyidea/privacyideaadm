@@ -60,7 +60,8 @@ COMMANDS
 
     * user: list the available users.
     * token: token commands used to list tokens, assign, enroll, resync ...
-    * machine: machine commands used to create new machines and assign tokens and applications to these machines
+    * machine: machine commands used to list machines and assign tokens and
+    applications to these machines
     * securitymodule: Get the status of the securitymodule or set the password of the securitymodule
     * config: server configuration
     * realm: realm configuration
@@ -86,6 +87,30 @@ The file `secrets.txt` would look like this::
    --admin
    admin@admin
 
+
+Get the Authentication Items from a Yubikey in challenge Response mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You have assigned the above enrolled Yubikey to a machine with the LUKS
+application. You can then get the authentication item like this::
+
+   privacyidea @secrets machine authitem --hostname <machine>
+   Please enter password for 'admin':
+
+    {   u'status': True,
+        u'value': {   u'luks': [   {   u'challenge': u'43eca67a4cf12a1b158c4ec7c1100b7529fb3f3d19370c040320c2245a4ae91d',
+                                       u'partition': u'/dev/sda',
+                                       u'response': u'1636b930f3ee4b37b8fe0cd9f979bb9fc99cd3ed',
+                                       u'slot': u'1'}]}}
+
+This means the **challenge** sent to the Yubikey will always produce the
+mentioned **response**.
+
+This can be used to populate an LUKS slot.
+
+To verify this use the command::
+
+   ykchalresp 43eca67a4cf12a1b158c4ec7c1100b7529fb3f3d19370c040320c2245a4ae91d
 
 Enroll an eToken NG OTP under Windows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

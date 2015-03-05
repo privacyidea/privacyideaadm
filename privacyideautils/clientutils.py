@@ -10,28 +10,18 @@
 #  contact:  http://www.linotp.org
 #            http://www.lsexperts.de
 #            linotp@lsexperts.de
-'''
+__doc__ = """
 This module is used for the communication of
-the python based management clients
-privacyidea-adm
-'''
+the python based management clients "privacyidea"
+"""
 
-import urllib2
-import httplib
-import urllib
-import re
-import random
-import sys
 import logging.handlers
-import cookielib
-import traceback
 import pprint
 import requests
 
 from etokenng import (etng,
-                       etngError)
+                      etngError)
 
-import json
 import gettext
 
 _ = gettext.gettext
@@ -102,8 +92,6 @@ class privacyideaclient(object):
         self.baseuri = baseuri
         self.log = logging.getLogger('privacyideaclient')
         self.verify_ssl = verify_ssl
-        # TODO:
-        self.verify_ssl = False
         # Do the first server communication and retrieve the auth token
         self.set_credentials(username, password)
 
@@ -164,9 +152,8 @@ class privacyideaclient(object):
     def userlist(self, param):
         return self.get('/user/', param)
 
-# TODO: Migration
-#    def auditsearch(self, param):
-#        return self.connect('/audit/search', param)
+    def auditsearch(self, param):
+        return self.get('/audit/', param)
 
     def inittoken(self, param):
         return self.post('/token/init', param)

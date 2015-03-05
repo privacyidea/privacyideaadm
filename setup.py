@@ -3,7 +3,7 @@ from distutils.core import setup
 import os
 import sys
 
-VERSION="2.0"
+VERSION="2.1dev1"
 
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
@@ -30,7 +30,6 @@ setup(name='privacyideaadm',
       install_requires=["requests"],
       scripts=['scripts/privacyidea',
                'scripts/privacyidea-luks-assign',
-               'scripts/privacyidea-ssh-assign',
 	           'scripts/privacyidea-authorizedkeys'],
 #      install_requires=['usb'],
       data_files=[('share/man/man1', ["doc/_build/man/privacyidea.1"])],

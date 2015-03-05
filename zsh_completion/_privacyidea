@@ -51,13 +51,9 @@ _privacyidea() {
 	;;
 	machine)
 	    local machine; machine=(
-		'create:create a new machine'
-		'delete:delete a machine'
 		'list:list all machines'
-		'gettokenapps:get all app/token assignments'
-		'showtoken:get all tokens assigned to a machine'
-		'deltoken:delete a token assignment from a machine'
-		'addoption:add an option to an assignment'
+		'authitem:retrieve an authentication item'
+		'showtoken:list token machine token attachments'
 		'-h:help'
 		)
 	    _describe -t machine 'machine command' machine && ret=0

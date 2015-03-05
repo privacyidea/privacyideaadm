@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 #
 #  privacyIDEA
+#  2015-03-05 Cornelius Kölbel, <cornelius@privacyidea.org>
+#             Add machine and authitem handling
 #  Aug 11, 2014 Cornelius Kölbel
+#
 #  License:  AGPLv3
 #  contact:  http://www.privacyidea.org
 #
@@ -38,7 +41,7 @@ like this at the command line:
    
 Thus you can avoid exposing secret credentials.
 """
-VERSION = "2.0"
+VERSION = "2.1"
 KNOWN_APPS = ["ssh", "luks"]
 DESCRIPTION = __doc__
 
@@ -50,8 +53,8 @@ import subprocess
 import getpass
 import binascii
 from privacyideautils.clientutils import (showresult,
-                                           dumpresult,
-                                           privacyideaclient)
+                                          dumpresult,
+                                          privacyideaclient)
 from privacyideautils.yubikey import enrollYubikey
 from privacyideautils.yubikey import YubikeyPlug
 from privacyideautils.yubikey import create_static_password
@@ -519,54 +522,43 @@ def settoken(args, client):
     showresult(response.data)
 
 
-def createmachine(args, client):
-    # TODO: Migration
-    response = client.connect("/machine/create", {}, {"name": args.name,
-                                                      "ip": args.ip,
-                                                      "desc":
-                                                          args.description
-                                                          or ""})
+def machine_list(args, client):
+    response = client.get('/machine/')
     showresult(response.data)
 
 
-def deletemachine(args, client):
-    # TODO: Migration
-    ret = client.connect("/machine/delete",
-                         {},
-                         {"name": args.name})
-    showresult(ret)
-
-
-def showmachine(args, client):
-    # TODO: Migration
+def machine_get_token(args, client):
     param = {}
-    if args.name:
-        param["name"] = args.name
-    ret = client.connect("/machine/show",
-                         {},
-                         param)
-    showresult(ret)
-
-
-def gettokenapps(args, client):
-    # TODO: Migration
-    param = {}
-    if args.name:
-        param["name"] = args.name
-    if args.app:
-        param["application"] = args.app
+    if args.hostname:
+        param["hostname"] = args.hostname
     if args.serial:
         param["serial"] = args.serial
+    if args.machineid:
+        param["machineid"] = args.machineid
+    if args.resolver:
+        param["resolver"] = args.resolver
+    response = client.get("/machine/token", param)
+    showresult(response.data)
+
+
+def machine_auth_item(args, client):
+    param = {}
+    if args.application:
+        param["application"] = args.application
+    if args.hostname:
+        param["hostname"] = args.hostname
     if args.challenge:
-        param["challenge"] = binascii.hexlify(args.challenge)
-    if args.challenge_hex:
-        param["challenge_hex"] = args.challenge_hex
+        param["challenge"] = args.challenge
 
-    ret = client.connect("/machine/gettokenapps", {}, param)
-    showresult(ret)
+    if param.get("application"):
+        response = client.get("/machine/authitem/%s" % param.get(
+            "application"), param)
+    else:
+        response = client.get("/machine/authitem", param)
+    showresult(response.data)
 
 
-def machine_addtoken(args, client):
+def machine_attachtoken(args, client):
     # TODO: Migration
     param = {"name": args.name,
              "serial": args.serial,
@@ -583,22 +575,7 @@ def machine_addtoken(args, client):
         showresult(ret)
 
 
-def machine_showtoken(args, client):
-    # TODO: Migration
-    param = {}
-    if args.name:
-        param["name"] = args.name
-    if args.serial:
-        param["serial"] = args.serial
-    if args.app:
-        param["app"] = args.app
-        param["application"] = args.app
-        
-    ret = client.connect("/machine/showtoken", {}, param)
-    showresult(ret)
-
-
-def machine_deltoken(args, client):
+def machine_detachtoken(args, client):
     # TODO: Migration
     ret = client.connect("/machine/deltoken",
                          {},
@@ -719,15 +696,18 @@ def create_arguments():
                         "https://localhost:5001",
                         required=True)
     parser.add_argument("-a", "--admin",
-                        help="The name of the administrator like "
-                        "admin@admin or admin",
+                        help="The name of an administrator or a normal "
+                             "user like 'admin' or 'user@realm2'. The "
+                             "administrator will be able to perform all "
+                             "tasks, while the user will only be able to "
+                             "enroll tokens and list tokens of his own.",
                         required=True)
     parser.add_argument("-r", "--adminrealm",
                         help="The realm of the administrator like "
                         "'admin'",
                         default="")
     parser.add_argument("-p", "--password",
-                        help="The password of the administrator. Please "
+                        help="The password of the user. Please "
                         "avoid to post the password at the command line. "
                         "You will be asked for it - or you can provide the "
                         "password in a configuration file. "
@@ -1023,80 +1003,54 @@ def create_arguments():
     #
     machine_parser = subparsers.add_parser("machine",
                                            help="machine commands used to "
-                                           "create new machines and assign "
+                                           "list machines and assign "
                                            "tokens and applications to these "
                                            "machines")
     machine_sub = machine_parser.add_subparsers()
     # createmachine
-    p_createmachine = machine_sub.add_parser("create",
-                                             help="Create a new machine "
-                                             "definition.")
-    p_createmachine.set_defaults(func=createmachine)
-    p_createmachine.add_argument("--name", help="The hostname of the machine",
-                                 required=True)
-    p_createmachine.add_argument("--ip", help="The IP address of the machine",
-                                 required=True)
-    p_createmachine.add_argument("--desc", help="A description of the machine")
-    p_createmachine.add_argument("--decommission", help="A decommission date "
-                                 "of the machine")
-    
-    # deletemachine
-    p_deletemachine = machine_sub.add_parser("delete",
-                                             help="Delete a machine "
-                                             "definition")
-    p_deletemachine.set_defaults(func=deletemachine)
-    p_deletemachine.add_argument("--name", help="The name of the machine to "
-                                 "be deleted",
-                                 required=True)
-    
-    # showmachine
-    p_showmachine = machine_sub.add_parser("list",
-                                           help="Show details of one machine "
-                                           "or of several machines")
-    p_showmachine.set_defaults(func=showmachine)
-    p_showmachine.add_argument("--name",
-                               help="The name of the machine. If no "
-                               "name is given, all machines will be "
-                               "displayed.")
-    
+    p_createmachine = machine_sub.add_parser("list",
+                                             help="List the machines found in "
+                                                  "the machine resolvers.")
+    p_createmachine.set_defaults(func=machine_list)
+
     # getttokenapps
-    p_gettapps = machine_sub.add_parser("gettokenapps",
-                                        help="get the application definitions "
-                                        "of "
-                                        "a machine, including the apps, the "
-                                        "serial numbers and the "
-                                        "authentication items")
-    p_gettapps.set_defaults(func=gettokenapps)
-    p_gettapps.add_argument("--name", help="The name of the machine")
-    p_gettapps.add_argument("--app", help="The name of the application",
-                            choices=KNOWN_APPS)
-    p_gettapps.add_argument("--serial", help="The serial number of the token")
-    p_gettapps.add_argument("--challenge",
-                            help="A challenge value, that might "
-                            "be needed to return an authentication item")
-    p_gettapps.add_argument("--challenge_hex",
-                            help="A challenge value in hexadecimal format, "
-                            "that "
-                            "might be needed to return an authentication item")
+    #p_gettapps = machine_sub.add_parser("gettokenapps",
+    #                                    help="get the application definitions "
+    #                                    "of "
+    #                                    "a machine, including the apps, the "
+    #                                    "serial numbers and the "
+    #                                    "authentication items")
+    #p_gettapps.set_defaults(func=gettokenapps)
+    #p_gettapps.add_argument("--name", help="The name of the machine")
+    #p_gettapps.add_argument("--app", help="The name of the application",
+    #                        choices=KNOWN_APPS)
+    #p_gettapps.add_argument("--serial", help="The serial number of the token")
+    #p_gettapps.add_argument("--challenge",
+    #                        help="A challenge value, that might "
+    #                        "be needed to return an authentication item")
+    #p_gettapps.add_argument("--challenge_hex",
+    #                        help="A challenge value in hexadecimal format, "
+    #                        "that "
+    #                        "might be needed to return an authentication item")
     
     # machine_addtoken
-    p_maddtoken = machine_sub.add_parser("addtoken",
-                                         help="Add a token with an "
-                                         "application "
-                                         "to a machine")
-    p_maddtoken.set_defaults(func=machine_addtoken)
-    p_maddtoken.add_argument("--name", help="The name of the machine",
-                             required=True)
-    p_maddtoken.add_argument("--serial", help="The serial number of the token",
-                             required=True)
-    p_maddtoken.add_argument("--app", help="The name of the application",
-                             required=True,
-                             choices=KNOWN_APPS)
-    p_maddtoken.add_argument("--option",
-                             help="Special option for the "
-                             "application. Like the user for SSH or the "
-                             "partition or slot for LUKS.",
-                             action="append")
+    #p_maddtoken = machine_sub.add_parser("addtoken",
+    #                                     help="Add a token with an "
+    #                                     "application "
+    #                                     "to a machine")
+    #p_maddtoken.set_defaults(func=machine_addtoken)
+    #p_maddtoken.add_argument("--name", help="The name of the machine",
+    #                         required=True)
+    #p_maddtoken.add_argument("--serial", help="The serial number of the token",
+    #                         required=True)
+    #p_maddtoken.add_argument("--app", help="The name of the application",
+    #                         required=True,
+    #                         choices=KNOWN_APPS)
+    #p_maddtoken.add_argument("--option",
+    #                         help="Special option for the "
+    #                         "application. Like the user for SSH or the "
+    #                         "partition or slot for LUKS.",
+    #                         action="append")
     
     # machine_showtoken
     p_mshowtoken = machine_sub.add_parser("showtoken",
@@ -1106,78 +1060,98 @@ def create_arguments():
                                           "token, "
                                           "for a machine or for an "
                                           "application")
-    p_mshowtoken.set_defaults(func=machine_showtoken)
-    p_mshowtoken.add_argument("--name", help="The name of the machine to show")
+    p_mshowtoken.set_defaults(func=machine_get_token)
+    p_mshowtoken.add_argument("--hostname", help="The name of the machine to "
+                                               "show")
+    p_mshowtoken.add_argument("--machineid", help="The machine ID in the "
+                                                  "machine resolver.")
+    p_mshowtoken.add_argument("--resolver", help="The name of the machine "
+                                                 "resolver")
     p_mshowtoken.add_argument("--serial",
                               help="The serial number of the token,"
                               " that is assigned in those mappings.")
-    p_mshowtoken.add_argument("--app", help="The name of the application",
-                              choices=KNOWN_APPS)
+
+    # get authentication item
+    p_mauthitem = machine_sub.add_parser("authitem",
+                                         help="Get the authentication item "
+                                              "for the given machine and "
+                                              "application")
+    p_mauthitem.set_defaults(func=machine_auth_item)
+    p_mauthitem.add_argument("--hostname", required=True,
+                             help="The hostname of the machine, for which the"
+                                  "authitem should be retrieved.")
+    p_mauthitem.add_argument("--application",
+                             help="The application, which authitems should be "
+                                  "retrieved.")
+    p_mauthitem.add_argument("--challenge",
+                             help="If the application requires a challenge, "
+                                  "you can pass a challenge, for which the "
+                                  "authitem will be returned.")
     
     # machine_deltoken
-    p_mdeltoken = machine_sub.add_parser("deltoken",
-                                         help="Delete a mapping from a "
-                                         "machine. "
-                                         "This does not delete the machine")
-    p_mdeltoken.set_defaults(func=machine_deltoken)
-    p_mdeltoken.add_argument("--name",
-                             help="The name of the machine to delete",
-                             required=True)
-    p_mdeltoken.add_argument("--serial",
-                             help="The serial number of the token, "
-                             "that is mapped", required=True)
-    p_mdeltoken.add_argument("--app",
-                             help="The name of the application that is "
-                             "mapped.", required=True,
-                             choices=KNOWN_APPS)
+    #p_mdeltoken = machine_sub.add_parser("deltoken",
+    #                                     help="Delete a mapping from a "
+    #                                     "machine. "
+    #                                     "This does not delete the machine")
+    #p_mdeltoken.set_defaults(func=machine_deltoken)
+    #p_mdeltoken.add_argument("--name",
+    #                         help="The name of the machine to delete",
+    #                         required=True)
+    #p_mdeltoken.add_argument("--serial",
+    #                         help="The serial number of the token, "
+    #                         "that is mapped", required=True)
+    #p_mdeltoken.add_argument("--app",
+    #                         help="The name of the application that is "
+    #                         "mapped.", required=True,
+    #                         choices=KNOWN_APPS)
     
     # machine_addoption
-    p_maddoption = machine_sub.add_parser("addoption",
-                                          help="Add an option to a machine "
-                                          "mapping.")
-    p_maddoption.set_defaults(func=machine_addoption)
-    p_maddoption.add_argument("--name", help="The name of the machine of the "
-                              "mapping to add the option to.",
-                              required=True)
-    p_maddoption.add_argument("--serial",
-                              help="The serial number of the token "
-                              "of the mapping to add the option to.",
-                              required=True)
-    p_maddoption.add_argument("--app",
-                              help="The name of the application of the "
-                              "mapping to add the option to",
-                              required=True,
-                              choices=KNOWN_APPS)
-    p_maddoption.add_argument("--option",
-                              help="The option to add. It should be "
-                              "passed like key=value. You can add several "
-                              "options "
-                              "at once.", required=True,
-                              action="append")
+    #p_maddoption = machine_sub.add_parser("addoption",
+    #                                      help="Add an option to a machine "
+    #                                      "mapping.")
+    #p_maddoption.set_defaults(func=machine_addoption)
+    #p_maddoption.add_argument("--name", help="The name of the machine of the "
+    #                          "mapping to add the option to.",
+    #                          required=True)
+    #p_maddoption.add_argument("--serial",
+    #                          help="The serial number of the token "
+    #                          "of the mapping to add the option to.",
+    #                          required=True)
+    #p_maddoption.add_argument("--app",
+    #                          help="The name of the application of the "
+    #                          "mapping to add the option to",
+    #                          required=True,
+    #                          choices=KNOWN_APPS)
+    #p_maddoption.add_argument("--option",
+    #                          help="The option to add. It should be "
+    #                          "passed like key=value. You can add several "
+    #                          "options "
+    #                          "at once.", required=True,
+    #                          action="append")
     
     # machine_deloption
-    p_mdeloption = machine_sub.add_parser("deloption",
-                                          help="Delete an option from "
-                                          "a machine mapping.")
-    p_mdeloption.set_defaults(func=machine_deloption)
-    p_mdeloption.add_argument("--name", help="The name of the machine of the "
-                              "mapping to delete the option from.",
-                              required=True)
-    p_mdeloption.add_argument("--serial",
-                              help="The serial number of the token "
-                              "of the mapping to to delete the option from.",
-                              required=True)
-    p_mdeloption.add_argument("--app",
-                              help="The name of the application of the "
-                              "mapping to delete the option from.",
-                              required=True,
-                              choices=KNOWN_APPS)
-    p_mdeloption.add_argument("--option",
-                              help="The option to delete. You only "
-                              "need to pass the key of the option. You can "
-                              "specify several options at once.",
-                              required=True,
-                              action="append")
+    #p_mdeloption = machine_sub.add_parser("deloption",
+    #                                      help="Delete an option from "
+    #                                      "a machine mapping.")
+    #p_mdeloption.set_defaults(func=machine_deloption)
+    #p_mdeloption.add_argument("--name", help="The name of the machine of the "
+    #                          "mapping to delete the option from.",
+    #                          required=True)
+    #p_mdeloption.add_argument("--serial",
+    #                          help="The serial number of the token "
+    #                          "of the mapping to to delete the option from.",
+    #                          required=True)
+    #p_mdeloption.add_argument("--app",
+    #                          help="The name of the application of the "
+    #                          "mapping to delete the option from.",
+    #                          required=True,
+    #                          choices=KNOWN_APPS)
+    #p_mdeloption.add_argument("--option",
+    #                          help="The option to delete. You only "
+    #                          "need to pass the key of the option. You can "
+    #                          "specify several options at once.",
+    #                          required=True,
+    #                          action="append")
     
     ###################################################################
     #
