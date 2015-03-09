@@ -81,6 +81,7 @@ def main():
         url = config.get("Default", "url")
         admin = config.get("Default", "admin")
         password = config.get("Default", "password")
+        nosslcheck = config.get("Default", "nosslcheck")
     except Exception as ex:
         print "You need to provide the config file!"
         print ex
@@ -88,7 +89,7 @@ def main():
 
     # Create the privacyideaclient instance
     client = privacyideaclient(admin, password, url,
-                               no_ssl_check=args.nosslcheck)
+                               no_ssl_check=args.nosslcheck or nosslcheck)
     params = {"hostname": socket.gethostname()}
     response = client.get("/machine/authitem/ssh", params)
     result = response.data.get("result")
