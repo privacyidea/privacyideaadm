@@ -1,8 +1,11 @@
-privacyideaadm (2.1~dev4-1) trusty; urgency=low
+privacyideaadm (2.1-1) trusty; urgency=low
 
+  * Reworking SSH and LUKS applications
   * Integrating the Machine Authentication Items
+  * Use Requests module for http communication
+  * honor SSL checking and add option --nosslcheck
 
- -- Cornelius Kölbel <cornelius@privacyidea.org>  Thu, 05 Mar 2015 10:10:00 +0200
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Tue, 10 Mar 2015 09:00:00 +0200
 
 privacyideaadm (2.0-1) trusty; urgency=low
 

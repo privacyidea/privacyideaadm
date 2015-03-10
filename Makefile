@@ -6,8 +6,8 @@ info:
 	@echo "man		-- make the manpage"
 	@echo "test		-- run tests"
 
-VERSION=2.1~dev4
-#VERSION=2.0
+#VERSION=2.1~dev4
+VERSION=2.1
 
 pypi:
 	make man
