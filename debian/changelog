@@ -1,3 +1,9 @@
+privacyideaadm (2.1-2) trusty; urgency=low
+
+  * Add requests dependency
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Thu, 12 Mar 2015 09:30:00 +0200
+
 privacyideaadm (2.1-1) trusty; urgency=low
 
   * Reworking SSH and LUKS applications

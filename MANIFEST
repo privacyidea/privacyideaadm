@@ -12,4 +12,3 @@ privacyideautils/yubikey.py
 scripts/privacyidea
 scripts/privacyidea-authorizedkeys
 scripts/privacyidea-luks-assign
-scripts/privacyidea-ssh-assign
