@@ -7,7 +7,7 @@ Standards-Version: 3.9.5
 
 Package: privacyideaadm
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, python-yubico, yubikey-personalization, python-usb, python-requests
+Depends: ${misc:Depends}, ${python:Depends}, python-yubico, yubikey-personalization, python-usb, python-requests, python-pysqlite2, sqlite3
 Description: admin client for privacyIDEA
  privacyIDEA: identity, multifactor authentication, authorization.
  privacyIDEA is an open solution for strong two-factor authentication.

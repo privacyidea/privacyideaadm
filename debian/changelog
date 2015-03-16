@@ -1,3 +1,9 @@
+privacyideaadm (2.2~dev0) trusty; urgency=low
+
+  * Start offline implementation
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Tue, 16 Mar 2015 17:20:00 +0200
+
 privacyideaadm (2.1-2) trusty; urgency=low
 
   * Add requests dependency
