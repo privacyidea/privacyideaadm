@@ -148,8 +148,9 @@ def yubi_mass_enroll(lotpc,
             pass
         if 'realm' in proc_params:
             submit_param['realm'] = proc_params.get('realm')
-        r1 = lotpc.inittoken(submit_param)
-        showresult(r1)
+        resp = lotpc.inittoken(submit_param)
+        print resp.status
+        showresult(resp.data)
 
 
 def cifs_push(config, text):
@@ -368,7 +369,6 @@ def inittoken(args, client):
 
 
 def yubikey_mass_enroll(args, client):
-    print args
     yubi_mass_enroll(client,
                      {},
                      mode_string_mapping.get(args.yubimode),

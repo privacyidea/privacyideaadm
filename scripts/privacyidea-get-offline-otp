@@ -33,7 +33,7 @@ from privacyideautils.clientutils import *
 import socket
 import sys
 import argparse
-import sqlite3
+from privacyideautils.offline import save_auth_item
 
 
 def create_arguments():
@@ -74,45 +74,6 @@ def create_arguments():
     return args
 
 
-def save_auth_item(sqlfile, authitem):
-    """
-    Save the given authitem to the sqlite file to be used later for offline
-    authentication.
-
-    There is only one table in it with the columns:
-
-        username, counter, otp
-
-    :param sqlfile: An SQLite file. If it does not exist, it will be generated.
-    :type sqlfile: basestring
-    :param authitem: A dictionary with all authitem information being:
-    username, count, and a response dict with counter and otphash.
-
-    :return:
-    """
-    conn = sqlite3.connect(sqlfile)
-    c = conn.cursor()
-    # Create the table if necessary
-    try:
-        c.execute("CREATE TABLE authitems "
-                  "(counter int, user text, tokenowner text, otp text)")
-    except:
-        pass
-    user = authitem.get("user")
-    tokenowner = authitem.get("username")
-
-    for counter, otphash in authitem.get("response").iteritems():
-        # Insert the OTP hash
-        c.execute("INSERT INTO authitems (counter, user, tokenowner, otp) "
-                  "VALUES ('%s','%s','%s','%s')"
-                  % (counter, user, tokenowner, otphash))
-
-    # Save (commit) the changes
-    conn.commit()
-
-    # We can also close the connection if we are done with it.
-    # Just be sure any changes have been committed or they will be lost.
-    conn.close()
 
 
 def main():
@@ -138,7 +99,7 @@ def main():
     result = response.data.get("result")
 
     if result.get("status"):
-        machinetokens = result.get("value").get("offline")
+        machinetokens = result.get("value").get("offline", {})
         if len(machinetokens) == 0:
             # No token available
             raise Exception("No token found for the application on this machine!")

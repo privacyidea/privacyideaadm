@@ -1,0 +1,62 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  privacyIDEA
+#  2015-03-16 Cornelius Kölbel, <cornelius@privacyidea.org>
+#             initial writeup to fetch offline auth_items
+#
+#  (c) 2015 Cornelius Kölbel, cornelius@privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+"""
+Check a given OTP an username against the offline OTP DB.
+"""
+
+VERSION = '2.2'
+DESCRIPTION = __doc__
+
+import sys
+import argparse
+from privacyideautils.offline import check_otp
+
+
+def create_arguments():
+    parser = argparse.ArgumentParser(description=DESCRIPTION,
+                                     fromfile_prefix_chars='@')
+    parser.add_argument("--sqlfile",
+                        help="The SQLite file where the offline information "
+                             "is to be stored.")
+    parser.add_argument("--user",
+                        help="The local username.")
+    parser.add_argument("--otp",
+                        help="The OTP value.")
+    args = parser.parse_args()
+
+    return args
+
+
+
+def main():
+    args = create_arguments()
+    sqlfile = args.sqlfile or "offlineotp.sqlite"
+    r = check_otp(args.user, args.otp, sqlfile=sqlfile)
+    sys.exit(r)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except Exception as ex:
+        print "Error: %s" % ex
+        sys.exit(5)
