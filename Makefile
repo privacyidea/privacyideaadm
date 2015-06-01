@@ -7,7 +7,7 @@ info:
 	@echo "test		-- run tests"
 
 #VERSION=2.1~dev4
-VERSION=2.3
+VERSION=2.4~dev0
 
 pypi:
 	make man

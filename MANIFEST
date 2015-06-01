@@ -6,6 +6,7 @@ privacyideautils/__init__.py
 privacyideautils/clientutils.py
 privacyideautils/etokenng.py
 privacyideautils/initdaplug.py
+privacyideautils/offline.py
 privacyideautils/pytoken-totp.py
 privacyideautils/pytoken.template.py
 privacyideautils/yubikey.py

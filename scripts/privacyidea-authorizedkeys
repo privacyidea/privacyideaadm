@@ -45,7 +45,7 @@ You need to create the following section:
    
 """
 
-VERSION = '2.1'
+VERSION = '2.4'
 DEBUG = False
 DESCRIPTION = __doc__
 DEFAULT_CONFIG = "/etc/privacyidea/authorizedkeyscommand"
@@ -74,7 +74,7 @@ def create_arguments():
 
 def main():
     args = create_arguments()
-    
+
     try:
         config = ConfigParser.RawConfigParser()
         config.read(DEFAULT_CONFIG)
@@ -90,7 +90,8 @@ def main():
     # Create the privacyideaclient instance
     client = privacyideaclient(admin, password, url,
                                no_ssl_check=args.nosslcheck or nosslcheck)
-    params = {"hostname": socket.gethostname()}
+    params = {"hostname": socket.gethostname(),
+              "user": args.user}
     response = client.get("/machine/authitem/ssh", params)
     result = response.data.get("result")
     

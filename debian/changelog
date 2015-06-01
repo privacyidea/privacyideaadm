@@ -1,3 +1,9 @@
+privacyideaadm (2.4~dev0) trusty; urgency=low
+
+  * ssh authorizedkeys: only request the specific users key
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Mon, 01 Jun 2015 17:00:00 +0200
+
 privacyideaadm (2.3-1) trusty; urgency=low
 
   * start offline implementation
