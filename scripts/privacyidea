@@ -1,7 +1,9 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
-#  privacyIDEA
+#  2015-08-19 Cornelius Kölbel <cornelius@privacyidea.org>
+#             Add possibility to write yubikey data to a file.
+#
 #  2015-03-05 Cornelius Kölbel, <cornelius@privacyidea.org>
 #             Add machine and authitem handling
 #  Aug 11, 2014 Cornelius Kölbel
@@ -41,7 +43,7 @@ like this at the command line:
    
 Thus you can avoid exposing secret credentials.
 """
-VERSION = "2.1"
+VERSION = "2.5"
 KNOWN_APPS = ["ssh", "luks"]
 DESCRIPTION = __doc__
 
@@ -78,11 +80,12 @@ def yubi_mass_enroll(lotpc,
                      yubi_prefix,
                      yubi_prefix_random,
                      yubi_cr):
-    '''
+    """
     Do the Yubikey mass enrollment
 
     :param lotpc: the privacyidea connnection
-    :param proc_params: the additional parameters from the command line
+    :param proc_params: all parameters form the command line
+    :type proc_params: Namespace
     :param yubi_mode: yubikey modus: YUBI_STATIC_MODE, YUBI_OATH_MODE,
                       YUBI_AES_MODE
     :param yubi_slot: slot of the yubikey [1,2]
@@ -90,8 +93,12 @@ def yubi_mass_enroll(lotpc,
     :param yubi_prefix: the public prefix
     :param yubi_prefix_random: the rendom prefix
     :param yubi_cr: boolean - uses as TOTP token a.k.a. Challenge Response mode
-    '''
+    """
     yp = YubikeyPlug()
+    print proc_params
+    description = proc_params.description
+    filename = proc_params.filename
+    print filename
     while 0 == 0:
         print "\nPlease insert the next yubikey.",
         sys.stdout.flush()
@@ -105,14 +112,15 @@ def yubi_mass_enroll(lotpc,
                                        slot=yubi_slot,
                                        mode=yubi_mode,
                                        challenge_response=yubi_cr)
-        description = proc_params.get('description', "mass enrolled")
         if yubi_mode == MODE_OATH:
             # According to http://www.openauthentication.org/oath-id/prefixes/
             # The OMP of Yubico is UB
             # As TokenType we use OM (oath mode)
-            submit_param = {'serial': "UBOM%s_%s" % (serial, yubi_slot),
+            submit_param = {'type': 'HOTP',
+                            'serial': "UBOM%s_%s" % (serial, yubi_slot),
                             'otpkey': otpkey,
-                            'description': description}
+                            'description': description,
+                            'otplen': 6}
             if yubi_cr:
                 submit_param['type'] = 'TOTP'
                 submit_param['timeStep'] = 30
@@ -148,9 +156,18 @@ def yubi_mass_enroll(lotpc,
             pass
         if 'realm' in proc_params:
             submit_param['realm'] = proc_params.get('realm')
-        resp = lotpc.inittoken(submit_param)
-        print resp.status
-        showresult(resp.data)
+
+        if filename:
+            # Now we write the data to a file
+            f = open(filename, mode="a")
+            f.write("%(serial)s, %(otpkey)s, %(type)s, %(otplen)s\n" %
+                    submit_param)
+            f.close()
+        else:
+            # The token is submitted to the privacyIDEA system
+            resp = lotpc.inittoken(submit_param)
+            print resp.status
+            showresult(resp.data)
 
 
 def cifs_push(config, text):
@@ -370,7 +387,7 @@ def inittoken(args, client):
 
 def yubikey_mass_enroll(args, client):
     yubi_mass_enroll(client,
-                     {},
+                     args,
                      mode_string_mapping.get(args.yubimode),
                      int(args.yubislot),
                      args.yubiprefixserial,
@@ -693,15 +710,13 @@ def create_arguments():
     parser.add_argument("-U", "--url",
                         help="The URL of the privacyIDEA server including "
                         "protocol and port like "
-                        "https://localhost:5001",
-                        required=True)
+                        "https://localhost:5001")
     parser.add_argument("-a", "--admin",
                         help="The name of an administrator or a normal "
                              "user like 'admin' or 'user@realm2'. The "
                              "administrator will be able to perform all "
                              "tasks, while the user will only be able to "
-                             "enroll tokens and list tokens of his own.",
-                        required=True)
+                             "enroll tokens and list tokens of his own.")
     parser.add_argument("-r", "--adminrealm",
                         help="The realm of the administrator like "
                         "'admin'",
@@ -841,6 +856,11 @@ def create_arguments():
                           "be initialized in. (default=OATH)",
                           choices=["OATH", "YUBICO", "STATIC"],
                           default="OATH")
+    p_ykmass.add_argument("--filename",
+                          help="If the initialized yubikeys should not be "
+                               "sent to a privacyIDEA server the otpkeys can "
+                               "be written to a CSV file, to be imported "
+                               "later.")
     p_ykmass.add_argument("--yubislot", help="The slot of the yubikey, that "
                           "is initialized (default=1)",
                           choices=["1", "2"],
@@ -849,6 +869,10 @@ def create_arguments():
                           help="Initialize the yubikey in challenge/"
                           "response mode.",
                           action="store_true")
+    p_ykmass.add_argument("--description", help="The description of the "
+                          "token. This can be used to identify the token "
+                          "more easily.",
+                          default="command line enrolled")
     
     # daplug_mass_enroll
     p_daplug = token_sub.add_parser("daplug_mass_enroll",
@@ -1277,18 +1301,19 @@ def create_arguments():
 
 def main():
     args = create_arguments()
+    client = None
+    if args.url:
+        if not args.password:
+            password = getpass.getpass(prompt="Please enter password for"
+                                       " '%s':" % args.admin)
+        else:
+            password = args.password
 
-    if not args.password:
-        password = getpass.getpass(prompt="Please enter password for"
-                                   " '%s':" % args.admin)
-    else:
-        password = args.password
-
-    # Create the privacyideaclient instance
-    client = privacyideaclient(args.admin,
-                               password,
-                               args.url,
-                               no_ssl_check=args.nosslcheck)
+        # Create the privacyideaclient instance
+        client = privacyideaclient(args.admin,
+                                   password,
+                                   args.url,
+                                   no_ssl_check=args.nosslcheck)
     args.func(args, client)
 
 
