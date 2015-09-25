@@ -66,7 +66,8 @@ COMMANDS
     * token: token commands used to list tokens, assign, enroll, resync ...
     * machine: machine commands used to list machines and assign tokens and
     applications to these machines
-    * securitymodule: Get the status of the securitymodule or set the password of the securitymodule
+    * securitymodule: Get the status of the securitymodule or set the password
+    of the securitymodule
     * config: server configuration
     * realm: realm configuration
     * resolver: resolver configuration

@@ -4,7 +4,7 @@ import os
 import sys
 
 #VERSION="2.1dev4"
-VERSION="2.5"
+VERSION="2.7dev1"
 
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
