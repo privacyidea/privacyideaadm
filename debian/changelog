@@ -1,3 +1,10 @@
+privacyideaadm (2.7~dev1) trusty; urgency=low
+
+  * Add missing tokentype "registration"
+  * Add enrollment of registration token in one realm
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Wed, 21 Okt 2015 23:30:00 +0200
+
 privacyideaadm (2.5-1) trusty; urgency=low
 
   * Yubikeys can be mass enrolled and written to a file for later import

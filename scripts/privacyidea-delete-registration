@@ -1,0 +1,87 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+#  2015-09-29 Cornelius Kölbel <cornelius.koelbel@netknights.it>
+#             initial writeup
+#
+#  License:  AGPLv3
+#  contact:  http://www.privacyidea.org
+#
+# This code is free software; you can redistribute it and/or
+# modify it under the terms of the GNU AFFERO GENERAL PUBLIC LICENSE
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or any later version.
+#
+# This code is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU AFFERO GENERAL PUBLIC LICENSE for more details.
+#
+# You should have received a copy of the GNU Affero General Public
+# License along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+__doc__ = """
+This command line tool deletes all registration tokens of users in a realm.
+"""
+
+# Adapt these values to your need
+ADMIN = "admin"
+ADMIN_PASSWORD = "test"
+URL = "https://localhost"
+NOSSLCHECK = True
+REALM = "themis"
+
+TOKENTYPES_TO_DELETE = ["registration"]
+#TOKENTYPES_TO_DELETE = ["registration", "spass"]
+
+
+from privacyideautils.clientutils import privacyideaclient
+
+
+def delete_registration_token(user, realm):
+    """
+    Get the number of tokens, the user has assigned to
+
+    :param user: username
+    :param realm: realmname
+    :return: int
+    """
+    response = client.listtoken({"user": user, "realm": realm})
+    result = response.data.get("result")
+    tokens = result.get("value", {}).get("tokens")
+    #print("================================")
+    #print("Tokens for user %s" % user)
+    #print(tokens)
+    for token in tokens:
+        print("User: %s, Token: %s (%s)" % (user, token.get("serial"),
+                                            token.get("tokentype")))
+        if token.get("tokentype") in TOKENTYPES_TO_DELETE:
+            # delete the token
+            r = client.deletetoken(token.get("serial"))
+            if r.status == 200:
+                print("Token %s deleted." % token.get("serial"))
+
+
+
+# create a client object to communicate with privacyidea
+client = privacyideaclient(ADMIN, ADMIN_PASSWORD, URL, no_ssl_check=NOSSLCHECK)
+
+# Get a response object with the userlist
+response = client.userlist({"realm": REALM})
+
+tokens = []
+
+if response.status != 200:
+    print("An error occurred: %s" % response.status)
+else:
+    print("Collecting user data...")
+    # everything went fine
+    data = response.data
+    result = data.get('result')
+    users = result.get('value')
+    print("Found %s users." % len(users))
+    for user in users:
+        username = user.get("username")
+        email = user.get("email")
+        # check, if the user has tokens
+        delete_registration_token(username, REALM)

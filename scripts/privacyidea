@@ -244,9 +244,15 @@ def sendmail(config, text):
     msg['From'] = sender
     msg['To'] = recipient
 
-    s = smtplib.SMTP(config.get("mail_host"))
-    s.sendmail(sender, [recipient], msg.as_string())
-    s.quit()
+    mail = smtplib.SMTP(config.get("mail_host"), config.get("mail_port") or 25)
+    mail.ehlo()
+    if config.get("mail_tls"):
+        mail.starttls()
+    if config.get("mail_user"):
+        mail.login(config.get("mail_user"), config.get("mail_password"))
+
+    mail.sendmail(sender, [recipient], msg.as_string())
+    mail.quit()
 
 
 def read_config(config_file):
@@ -384,6 +390,69 @@ def inittoken(args, client):
     print resp.status
     showresult(resp.data)
 
+
+def get_users_token_num(client, user, realm):
+    """
+    Get the number of tokens, the user has assigned to
+
+    :param user: username
+    :param realm: realmname
+    :return: int
+    """
+    response = client.listtoken({"user": user, "realm": realm})
+    result = response.data.get("result")
+    count = result.get("value", {}).get("count", 0)
+    return count
+
+
+def registration_enroll(args, client):
+    """
+    enroll registration tokens for all users in a realm, who do not have a
+    token, yet.
+
+    :param args:
+    :param client:
+    :return:
+    """
+    print args
+    response = client.userlist({"realm": args.realm})
+    data = response.data
+    result = data.get('result')
+    users = result.get('value')
+    tokens = []
+    for user in users:
+        username = user.get("username")
+        email = user.get("email")
+        # check, if the user has tokens
+        count = get_users_token_num(client, username, args.realm)
+        if count == 0:
+            # User has no token, create one.
+            print("Creating token for user %s" % username)
+            response = client.inittoken({"type": "registration",
+                                         "user": username,
+                                         "realm": args.realm})
+            result = response.data.get("result")
+            detail = response.data.get("detail")
+            registrationcode = detail.get("registrationcode")
+            serial = detail.get("serial")
+            tokens.append({"username": username,
+                           "email": email,
+                           "serial": serial,
+                           "registration": registrationcode})
+
+    for token in tokens:
+        if args.dump:
+            print token
+        else:
+            print("Sending email to %(email)s" % token)
+            config = {"mail_to": token.get("email"),
+                      "mail_from": args.mail_from,
+                      "mail_host": args.mail_host,
+                      "mail_port": args.mail_port,
+                      "mail_tls": args.mail_tls,
+                      "mail_user": args.mail_user,
+                      "mail_password": args.mail_password}
+            sendmail(config, args.mail_body % token)
 
 def yubikey_mass_enroll(args, client):
     yubi_mass_enroll(client,
@@ -832,11 +901,48 @@ def create_arguments():
     p_inittoken.add_argument("--otpkey", help="The OTP key, like the HMAC key")
     p_inittoken.add_argument("--type", help="The token type",
                              choices=["hotp", "totp", "pw", "spass", "dpw",
-                                      "ssh", "sms", "email", "yubico"],
+                                      "ssh", "sms", "email", "yubico",
+                                      "registration"],
                              default="hotp")
     p_inittoken.add_argument("--etng", help="If specified, an etoken NG will "
                              "be initialized", action="store_true")
-
+    # registration_enroll
+    # Will enroll a registration token to each user in a realm, who has now
+    # token, yet.
+    p_registration = token_sub.add_parser("registration",
+                                          help="Enroll registration tokens to "
+                                               "users in a realm.")
+    p_registration.set_defaults(func=registration_enroll)
+    p_registration.add_argument("--realm", help="The realm for which "
+                                                "registration tokens should "
+                                                "be enrolled.",
+                                required=True)
+    p_registration.add_argument("--dump",
+                                help="Do not send notification "
+                                     "email to the user, but dump "
+                                     "the data to stdout.",
+                                action="store_true")
+    p_registration.add_argument("--mail_host",
+                                help="Mailserver to send notification.",
+                                required=True)
+    p_registration.add_argument("--mail_from", help="Mail sender address.",
+                                required=True)
+    p_registration.add_argument("--mail_subject", help="Mail subject.",
+                                required=True)
+    p_registration.add_argument("--mail_body",
+                                help="Mail body. Should contain %%(username)s "
+                                     "and %%(registration)s",
+                                required=True)
+    p_registration.add_argument("--mail_port", help="Port of the mailserver",
+                                default=25)
+    p_registration.add_argument("--mail_tls",
+                                help="If mailserver supports STARTTLS.",
+                                default=False,
+                                action="store_true")
+    p_registration.add_argument("--mail_user",
+                                help="Username, if required by mailserver.")
+    p_registration.add_argument("--mail_password",
+                                help="Password, if required by mailserver.")
     # yubikey_mass_enroll
     p_ykmass = token_sub.add_parser("yubikey_mass_enroll",
                                     help="Initialize a bunch of yubikeys")

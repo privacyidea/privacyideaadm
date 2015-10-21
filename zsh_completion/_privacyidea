@@ -36,6 +36,7 @@ _privacyidea() {
 		'yubikey_mass_enroll:enroll Yubikeys'
 		'daplug_mass_enroll:enroll daplug tokens'
 		'etokenng_mass_enroll:enroll eToken NG OTP'
+		'registration:enroll registration token in one realm'
 		'-h:help'
 	    )
 	    _describe -t token 'token command' token && ret=0
@@ -114,6 +115,7 @@ _privacyidea() {
 		'ssh:SSH key token'
 		'sms:SMS token'
 		'email:email token'
+		'registration:registration token'
 		'yubico:Yubico token in the Yubico AES mode'
 		)	
 		_describe -t type 'token type' params && ret=0
