@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
+#  2015-09-25 Cornelius Kölbel <cornelius@privacyidea.org>
+#             Add HSM interface
 #  2015-08-19 Cornelius Kölbel <cornelius@privacyidea.org>
 #             Add possibility to write yubikey data to a file.
 #
@@ -43,7 +45,7 @@ like this at the command line:
    
 Thus you can avoid exposing secret credentials.
 """
-VERSION = "2.5"
+VERSION = "2.7"
 KNOWN_APPS = ["ssh", "luks"]
 DESCRIPTION = __doc__
 
@@ -732,9 +734,9 @@ def deleteresolver(args, client):
 
 def setresolver(args, client):
     if args.type.lower() == "passwd":
-        response =  client.setresolver(args.resolver, {"type": args.type,
-                                                       "filename":
-                                                          args.filename})
+        response = client.setresolver(args.resolver, {"type": args.type,
+                                                      "filename":
+                                                         args.filename})
     showresult(response.data)
 
 
@@ -744,13 +746,12 @@ def securitymodule(args, client):
         password = getpass.getpass(prompt="Please enter password for"
                                    " security module '%s':" % module)
         print("Setting the password of your security module %s" % module)
-        r1 = client.securitymodule(param={"hsm_id": module,
-                                          "password": str(password)})
+        response = client.set_hsm(param={"hsm_id": module,
+                                         "password": str(password)})
     else:
-        print "This is the configuration of your active Security module:"
-        print
-        r1 = client.securitymodule(param={})
-    showresult(r1)
+        print("This is the configuration of your active Security module:")
+        response = client.get_hsm()
+    showresult(response.data)
 
 
 def get_config(args, client):

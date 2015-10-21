@@ -222,8 +222,11 @@ class privacyideaclient(object):
     def getrealms(self):
         return self.get('/realm/')
 
-    def securitymodule(self, param={}):
-        return self.connect('/system/setupSecurityModule', param)
+    def get_hsm(self, param={}):
+        return self.get('/system/hsm', param)
+
+    def set_hsm(self, param={}):
+        return self.post('/system/hsm', param)
 
     def setrealm(self, realmname, param):
         return self.post('/realm/%s' % realmname, param)
