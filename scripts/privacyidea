@@ -552,8 +552,41 @@ def enabletoken(args, client):
 
 
 def deletetoken(args, client):
-    response = client.deletetoken(args.serial)
-    showresult(response.data)
+    """
+    Delete tokens based on
+    * serial number
+    * the username or
+    * the tokentype
+
+    :param args:
+    :param client:
+    :return:
+    """
+    serials = []
+    if args.serial:
+        serials = [args.serial]
+
+    elif args.user:
+        response = client.listtoken({"user": args.user, "realm": args.realm})
+        value = response.data.get("result", {}).get("value")
+        for token in value.get("tokens"):
+            serials.append(token.get("serial"))
+
+    elif args.type:
+        if not args.realm:
+            print("If you want to delete a tokentype, you need to specify a "
+                  "realm!")
+            sys.exit(1)
+        response = client.listtoken({"tokenrealm": args.realm, "type":
+            args.type})
+        value = response.data.get("result", {}).get("value")
+        for token in value.get("tokens"):
+            serials.append(token.get("serial"))
+
+    for serial in serials:
+        print("Delete token %s" % serial)
+        response = client.deletetoken(serial)
+        showresult(response.data)
 
 
 def resynctoken(args, client):
@@ -1065,6 +1098,12 @@ def create_arguments():
     p_remove.add_argument("--user",
                           help="The username of the user, whose tokens should "
                           "be deleted")
+    p_remove.add_argument("--realm",
+                          help="Delete all tokens of the given type in this "
+                               "realm.")
+    p_remove.add_argument("--type",
+                          help="Delete all tokens of this type in the given "
+                               "realm.")
     
     # resynctoken
     p_resync = token_sub.add_parser("resync",
