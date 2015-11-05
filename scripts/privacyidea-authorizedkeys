@@ -55,6 +55,7 @@ import socket
 from privacyideautils.clientutils import *
 import ConfigParser
 import sys
+import re
 
 
 def create_arguments():
