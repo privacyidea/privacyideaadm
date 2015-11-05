@@ -90,6 +90,7 @@ def main():
     # Create the privacyideaclient instance
     client = privacyideaclient(admin, password, url,
                                no_ssl_check=args.nosslcheck or nosslcheck)
+    user = re.sub(".*\\\\(.*)", "\\1", args.user)
     params = {"hostname": socket.gethostname(),
               "user": args.user}
     response = client.get("/machine/authitem/ssh", params)
