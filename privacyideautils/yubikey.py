@@ -119,8 +119,6 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
             raise YubiError("privacyIDEA only supports the OATH challenge Response mode at the moment!")
         else:
             Cfg.mode_yubikey_otp(uid, 'h:' + key)
-        if len_fixed_string == 0:
-            len_fixed_string = 6
 
     elif mode == MODE_OATH:
         key = binascii.hexlify(os.urandom(20))
