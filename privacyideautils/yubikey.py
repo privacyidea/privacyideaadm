@@ -119,6 +119,8 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
             raise YubiError("privacyIDEA only supports the OATH challenge Response mode at the moment!")
         else:
             Cfg.mode_yubikey_otp(uid, 'h:' + key)
+        if len_fixed_string == 0:
+            len_fixed_string = 6
 
     elif mode == MODE_OATH:
         key = binascii.hexlify(os.urandom(20))
@@ -145,10 +147,13 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
     # Do the fixed string:
     if prefix_serial:
         Cfg.fixed_string(serial)
-    if fixed_string:
+    elif fixed_string:
         Cfg.fixed_string(fixed_string)
     elif len_fixed_string:
-        fs = os.urandom(len_fixed_string)
+        if mode == MODE_YUBICO:
+            fs = binascii.unhexlify('ff') + os.urandom(len_fixed_string - 1)
+        else:
+            fs = os.urandom(len_fixed_string)
         Cfg.fixed_string(fs)
 
     # set CR behind OTP value
