@@ -988,7 +988,7 @@ def create_arguments():
                           "of length",
                           metavar="NUMBER",
                           type=int,
-                          default=6)
+                          default=0)
     p_ykmass.add_argument("--yubiprefixserial",
                           help="Use the serial number of "
                           "the yubikey as prefix.", action="store_true")
