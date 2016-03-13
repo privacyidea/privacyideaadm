@@ -74,6 +74,7 @@ def create_static_password(key_hex):
     
     return password
 
+
 def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access_key=None, slot=1,
                   mode=MODE_OATH,
                   fixed_string=None,
@@ -90,18 +91,21 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
     :param len_fixed_string: This specified the length of the random fixed string. 
     :type len_fixed_string: integer
     
-    
+    :return: tuple of key, serial, fixed_string
     '''
     YK = yubico.yubikey.find_key(debug=debug)
     firmware_version = YK.version()
     serial = "%08d" % YK.serial()
+    # The fixed string to be returned
+    ret_fixed_string = ""
 
     v1 = re.match('1.', firmware_version)
     v2 = re.match('2.0.', firmware_version)
     
-    if (v1 or v2):
-        raise YubiError("Your Yubikey is too old. You need Firmware 2.1 or above. You are running %s"
-            % firmware_version)
+    if v1 or v2:
+        raise YubiError("Your Yubikey is too old. You need Firmware 2.1 or "
+                        "above. You are running %s"
+                        % firmware_version)
 
     Cfg = YK.init_config()
 
@@ -116,7 +120,8 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
         uid = os.urandom(yubico.yubikey_defs.UID_SIZE)
         if challenge_response:
             #Cfg.mode_challenge_response('h:' + key, type="OTP")
-            raise YubiError("privacyIDEA only supports the OATH challenge Response mode at the moment!")
+            raise YubiError("privacyIDEA only supports the OATH challenge "
+                            "Response mode at the moment!")
         else:
             Cfg.mode_yubikey_otp(uid, 'h:' + key)
 
@@ -133,7 +138,6 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
                 # We seem to have 0.0.4
                 Cfg.mode_oath_hotp('h:' + key, bytes=digits)
 
-
     elif mode == MODE_STATIC:
         key = binascii.hexlify(os.urandom(16))
         Cfg.aes_key('h:' + key)
@@ -144,15 +148,17 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
 
     # Do the fixed string:
     if prefix_serial:
-        Cfg.fixed_string(serial)
+        ret_fixed_string = serial
     elif fixed_string:
-        Cfg.fixed_string(fixed_string)
+        ret_fixed_string = fixed_string
     elif len_fixed_string:
         if mode == MODE_YUBICO:
-            fs = binascii.unhexlify('ff') + os.urandom(len_fixed_string - 1)
+            ret_fixed_string = binascii.unhexlify('ff') + os.urandom(
+                len_fixed_string - 1)
         else:
-            fs = os.urandom(len_fixed_string)
-        Cfg.fixed_string(fs)
+            ret_fixed_string = os.urandom(len_fixed_string)
+    Cfg.fixed_string(ret_fixed_string)
+    ret_fixed_string = modhex_encode(ret_fixed_string)
 
     # set CR behind OTP value
     Cfg.ticket_flag('APPEND_CR', APPEND_CR)
@@ -160,7 +166,7 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
     
     YK.write_config(Cfg, slot=slot)
 
-    return (key, serial)
+    return key, serial, ret_fixed_string
 
 
 def main():
@@ -206,7 +212,7 @@ def main():
         #otpkey, serial = enrollYubikey( debug= False ,
         #                                access_key = binascii.unhexlify('121212121212'),
         #                                unlock_key = binascii.unhexlify('121212121212'))
-        otpkey, serial = enrollYubikey(debug=False)
+        otpkey, serial, fixed_string = enrollYubikey(debug=False)
         print "Success: serial: %s, otpkey: %s." % (serial, otpkey)
         #
         # Now we write to a file
@@ -220,7 +226,7 @@ def main():
     except yubico.yubico_exception.YubicoError as  e:
         print "ERROR: %s" % str(e)
         sys.exit(1)
-    except YubiError as  e:
+    except YubiError as e:
         print "Error: %s" % e.value
 
 

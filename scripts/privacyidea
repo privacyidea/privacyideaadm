@@ -106,14 +106,15 @@ def yubi_mass_enroll(lotpc,
         sys.stdout.flush()
         submit_param = {}
         _ret = yp.wait_for_new_yubikey()
-        otpkey, serial = enrollYubikey(debug=False,
-                                       APPEND_CR=not yubi_cr,
-                                       prefix_serial=yubi_prefix_serial,
-                                       fixed_string=yubi_prefix,
-                                       len_fixed_string=yubi_prefix_random,
-                                       slot=yubi_slot,
-                                       mode=yubi_mode,
-                                       challenge_response=yubi_cr)
+        otpkey, serial, prefix = enrollYubikey(
+            debug=False,
+            APPEND_CR=not yubi_cr,
+            prefix_serial=yubi_prefix_serial,
+            fixed_string=yubi_prefix,
+            len_fixed_string=yubi_prefix_random,
+            slot=yubi_slot,
+            mode=yubi_mode,
+            challenge_response=yubi_cr)
         if yubi_mode == MODE_OATH:
             # According to http://www.openauthentication.org/oath-id/prefixes/
             # The OMP of Yubico is UB
@@ -122,7 +123,8 @@ def yubi_mass_enroll(lotpc,
                             'serial': "UBOM%s_%s" % (serial, yubi_slot),
                             'otpkey': otpkey,
                             'description': description,
-                            'otplen': 6}
+                            'otplen': 6,
+                            'yubikey.prefix': prefix}
             if yubi_cr:
                 submit_param['type'] = 'TOTP'
                 submit_param['timeStep'] = 30
@@ -134,7 +136,8 @@ def yubi_mass_enroll(lotpc,
             submit_param = {'serial': "UBSM%s_%s" % (serial, yubi_slot),
                             'otpkey': password,
                             'type': "pw",
-                            'description': description}
+                            'description': description,
+                            'yubikey.prefix': prefix}
 
         elif yubi_mode == MODE_YUBICO:
             yubi_otplen = 32
@@ -151,7 +154,8 @@ def yubi_mass_enroll(lotpc,
                             'serial': "UBAM%s_%s" % (serial, yubi_slot),
                             'otpkey': otpkey,
                             'otplen': yubi_otplen,
-                            'description': description}
+                            'description': description,
+                            'yubikey.prefix': prefix}
 
         else:
             print "Unknown Yubikey mode"
