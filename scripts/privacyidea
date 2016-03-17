@@ -302,6 +302,10 @@ def options_to_dict(Option):
 
 def listtoken(args, client):
     param = {}
+    if args.user:
+        param["user"] = args.user
+    if args.serial:
+        param["serial"] = args.serial
     if args.csv:
         param['outform'] = 'csv'
         if args.export_fields:
@@ -1464,7 +1468,11 @@ def main():
                                    password,
                                    args.url,
                                    no_ssl_check=args.nosslcheck)
-    args.func(args, client)
+
+        print args
+        args.func(args, client)
+    else:
+        print("Missing parameters")
 
 
 if __name__ == '__main__':
