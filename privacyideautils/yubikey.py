@@ -78,7 +78,7 @@ def create_static_password(key_hex):
 def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access_key=None, slot=1,
                   mode=MODE_OATH,
                   fixed_string=None,
-                  len_fixed_string=0,
+                  len_fixed_string=-1,
                   prefix_serial=False,
                   challenge_response=False):
     '''
@@ -114,6 +114,13 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
         Cfg.unlock_key(unlock_key)
     if access_key:
         Cfg.access_key(access_key)
+
+    # default fixed string length is 0, but 6 for MODE_YUBICO
+    if len_fixed_string == -1:
+        if mode == MODE_YUBICO:
+            len_fixed_string = 6
+        else:
+            len_fixed_string = 0
 
     if mode == MODE_YUBICO:
         key = binascii.hexlify(os.urandom(16))
