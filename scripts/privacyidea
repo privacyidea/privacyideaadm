@@ -146,6 +146,9 @@ def yubi_mass_enroll(lotpc,
             elif yubi_prefix:
                 yubi_otplen = 32 + (len(yubi_prefix) * 2)
             elif yubi_prefix_random:
+                # default prefix length for MODE_YUBICO is 6
+                if yubi_prefix_random is None:
+                    yubi_prefix_random = 6
                 yubi_otplen = 32 + (yubi_prefix_random * 2)
             # According to http://www.openauthentication.org/oath-id/prefixes/
             # The OMP of Yubico is UB
@@ -993,10 +996,10 @@ def create_arguments():
                           "by the yubikey",
                           default="")
     p_ykmass.add_argument("--yubiprefixrandom", help="A random prefix "
-                          "of length",
+                          "of length. For YUBICO mode the default will be 6!",
                           metavar="NUMBER",
                           type=int,
-                          default=0)
+                          default=None)
     p_ykmass.add_argument("--yubiprefixserial",
                           help="Use the serial number of "
                           "the yubikey as prefix.", action="store_true")
