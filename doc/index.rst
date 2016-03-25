@@ -54,23 +54,23 @@ OPTIONS
 
 COMMANDS
 --------
-  The command line tool requires commands, to know what action it should
-  take. Some commands have only one level, other commands are grouped and
-  have two levels.
+The command line tool requires commands, to know what action it should
+take. Some commands have only one level, other commands are grouped and
+have two levels.
 
-  You can get help at each level by appending the parameter -h.
+You can get help at each level by appending the parameter -h.
 
-  Top level commands are:
+Top level commands are:
 
-    * user: list the available users.
-    * token: token commands used to list tokens, assign, enroll, resync ...
-    * machine: machine commands used to list machines and assign tokens and
+  * user: list the available users.
+  * token: token commands used to list tokens, assign, enroll, resync ...
+  * machine: machine commands used to list machines and assign tokens and
     applications to these machines
-    * securitymodule: Get the status of the securitymodule or set the password
+  * securitymodule: Get the status of the securitymodule or set the password
     of the securitymodule
-    * config: server configuration
-    * realm: realm configuration
-    * resolver: resolver configuration
+  * config: server configuration
+  * realm: realm configuration
+  * resolver: resolver configuration
 
 EXAMPLES
 --------
@@ -143,7 +143,7 @@ Please unpack it and from within the new folder issue the following commands::
 Now you need to unpack the latest privacyideaadm package and also install it via the
 same commands `setup.py build` and `install` as above.
 
-The scripts are installed to `C:\python27\scripts`.
+The scripts are installed to `C:\\python27\\scripts`.
 
 Now you can start the command line client to enroll eToken NG::
 
