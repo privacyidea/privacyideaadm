@@ -1,10 +1,10 @@
-privacyideaadm (2.11~dev1) trusty; urgency=low
+privacyideaadm (2.11-1) trusty; urgency=low
 
   * Improve Yubikey handling. The yubikey gets a prefix that
     is stored in the privacyIDEA token database and can be 
     used with the Yubico Service.
 
- -- Cornelius Kölbel <cornelius@privacyidea.org>  Sun, 13 Mar 2015 17:30:00 +0200
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Tue, 29 Mar 2016 08:30:00 +0200
 
 privacyideaadm (2.7-1) trusty; urgency=low
 
