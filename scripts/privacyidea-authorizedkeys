@@ -55,6 +55,7 @@ import socket
 from privacyideautils.clientutils import *
 import ConfigParser
 import sys
+import traceback
 
 
 def create_arguments():
@@ -115,5 +116,6 @@ if __name__ == '__main__':
         try:
             main()
         except Exception as ex:
-            print "Error: %s" % ex
+            print("%s" % traceback.format_exc())
+            print("Error: %s" % ex)
             sys.exit(5)

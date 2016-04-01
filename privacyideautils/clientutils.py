@@ -100,7 +100,10 @@ class privacyideaclient(object):
             raise PrivacyIDEAClientError(eid=r.status_code,
                                           description=r.text)
         try:
-            json_response = r.json()
+            json_response = r.json
+            if callable(json_response):
+                # requests > 2.0
+                json_response = json_response()
         except:
             json_response = None
 
@@ -121,7 +124,10 @@ class privacyideaclient(object):
                           verify=self.verify_ssl)
 
         if r.status_code == requests.codes.ok:
-            res = r.json()
+            res = r.json
+            if callable(res):
+                # requests > 2.0
+                res = res()
             result = res.get("result")
             if result.get("status") is True:
                 self.auth_token = result.get("value", {}).get("token")
@@ -134,7 +140,6 @@ class privacyideaclient(object):
                          params=param,
                          verify=self.verify_ssl)
         return self._send_response(r)
-
 
     def post(self, uripath, param=None):
         r = requests.post("%s%s" % (self.baseuri, uripath),
