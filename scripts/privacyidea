@@ -785,13 +785,11 @@ def setresolver(args, client):
 
 
 def securitymodule(args, client):
-    if args.module:
-        module = args.module
+    if args.init_hsm:
         password = getpass.getpass(prompt="Please enter password for"
-                                   " security module '%s':" % module)
-        print("Setting the password of your security module %s" % module)
-        response = client.set_hsm(param={"hsm_id": module,
-                                         "password": str(password)})
+                                   " security module:")
+        print("Setting the password of your security module")
+        response = client.set_hsm(param={"password": str(password)})
     else:
         print("This is the configuration of your active Security module:")
         response = client.get_hsm()
@@ -1347,10 +1345,10 @@ def create_arguments():
                                              "password "
                                              "of the securitymodule")
     p_securitymodule.set_defaults(func=securitymodule)
-    p_securitymodule.add_argument("--module", help="The module name of the "
-                                  "securitymodule. If the module name is "
-                                  "specified you can set the password of the "
-                                  "module.")
+    p_securitymodule.add_argument("--init_hsm",
+                                  help="Initialize the module by entering the "
+                                       "password",
+                                  action="store_true")
     
     ################################################################
     #
@@ -1472,7 +1470,6 @@ def main():
                                    args.url,
                                    no_ssl_check=args.nosslcheck)
 
-        print args
         args.func(args, client)
     else:
         print("Missing parameters")
