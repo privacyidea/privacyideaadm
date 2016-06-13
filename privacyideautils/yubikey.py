@@ -75,24 +75,32 @@ def create_static_password(key_hex):
     return password
 
 
-def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access_key=None, slot=1,
+def enrollYubikey(digits=6, APPEND_CR=True, debug=False, access_key=None,
+                  new_access_key=None, slot=1,
                   mode=MODE_OATH,
                   fixed_string=None,
                   len_fixed_string=None,
                   prefix_serial=False,
                   challenge_response=False):
-    '''
-    :param mode: Defines if the yubikey should be enrolled in OATH mode (1) or Yubico Mode (2)
+    """
+    :param mode: Defines if the yubikey should be enrolled in OATH mode (1) or
+        Yubico Mode (2)
     :type mode: integer
     
-    :param fixed_string: A fixed string can be added in front of the output. If set to None, a random string will be generated
+    :param fixed_string: A fixed string can be added in front of the output.
+        If set to None, a random string will be generated
     :type fixed_string: string
+
+    :param access_key: A hex string, that needs to be passed to programm the
+        yubikey
+    :param new_access_key: A hex string, that is set as the new access_key
     
-    :param len_fixed_string: This specified the length of the random fixed string. 
+    :param len_fixed_string: This specified the length of the random fixed
+        string.
     :type len_fixed_string: integer
     
     :return: tuple of key, serial, fixed_string
-    '''
+    """
     YK = yubico.yubikey.find_key(debug=debug)
     firmware_version = YK.version()
     serial = "%08d" % YK.serial()
@@ -109,11 +117,15 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, unlock_key=None, access
 
     Cfg = YK.init_config()
 
-    # handle unlock_key and access_key
-    if unlock_key:
-        Cfg.unlock_key(unlock_key)
+    # handle access_key and new_access_key
     if access_key:
-        Cfg.access_key(access_key)
+        access_key = access_key if access_key[1:] == "h:" else "h:"+access_key
+        Cfg.unlock_key(access_key)
+    if new_access_key:
+        # set new accesskey
+        new_access_key = new_access_key if new_access_key[1:] == "h:" else \
+            "h:" + new_access_key
+        Cfg.access_key(new_access_key)
 
     # default fixed string length is 0, but 6 for MODE_YUBICO
     if len_fixed_string is None:

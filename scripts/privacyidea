@@ -81,7 +81,9 @@ def yubi_mass_enroll(lotpc,
                      yubi_prefix_serial,
                      yubi_prefix,
                      yubi_prefix_random,
-                     yubi_cr):
+                     yubi_cr,
+                     yubi_access_key,
+                     yubi_new_access_key):
     """
     Do the Yubikey mass enrollment
 
@@ -95,6 +97,8 @@ def yubi_mass_enroll(lotpc,
     :param yubi_prefix: the public prefix
     :param yubi_prefix_random: the rendom prefix
     :param yubi_cr: boolean - uses as TOTP token a.k.a. Challenge Response mode
+    :param yubi_access_key: hexkey to programm a yubikey
+    :param yubi_new_access_key: new access key
     """
     yp = YubikeyPlug()
     print proc_params
@@ -114,7 +118,9 @@ def yubi_mass_enroll(lotpc,
             len_fixed_string=yubi_prefix_random,
             slot=yubi_slot,
             mode=yubi_mode,
-            challenge_response=yubi_cr)
+            challenge_response=yubi_cr,
+            access_key=yubi_access_key,
+            new_access_key=yubi_new_access_key)
         if yubi_mode == MODE_OATH:
             # According to http://www.openauthentication.org/oath-id/prefixes/
             # The OMP of Yubico is UB
@@ -475,7 +481,9 @@ def yubikey_mass_enroll(args, client):
                      args.yubiprefixserial,
                      args.yubiprefix,
                      args.yubiprefixrandom,
-                     args.yubiCR)
+                     args.yubiCR,
+                     args.access,
+                     args.newaccess)
 
 
 def daplug_mass_enroll(args, client):
@@ -1022,6 +1030,14 @@ def create_arguments():
                           "token. This can be used to identify the token "
                           "more easily.",
                           default="command line enrolled")
+    p_ykmass.add_argument("--access",
+                          help="Use this hexlified access key to programm the "
+                               "yubikey")
+    p_ykmass.add_argument("--newaccess",
+                          help="Set a new access key, so that the yubikey will"
+                               "only programmable with this new access key. "
+                               "You can reset the access key by setting the "
+                               "new access key to '000000000000'.")
     
     # daplug_mass_enroll
     p_daplug = token_sub.add_parser("daplug_mass_enroll",

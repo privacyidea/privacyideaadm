@@ -1,4 +1,4 @@
-privacyideaadm (2.11~dev1-1) trusty; urgency=low
+privacyideaadm (2.12~dev1-1) trusty; urgency=low
 
   * allow older requests libraries
 

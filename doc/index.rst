@@ -92,6 +92,15 @@ The file `secrets.txt` would look like this::
    --admin
    admin@admin
 
+If you are using access/unlock keys on your yubikeys you can add to your file
+ something like
+
+    --access
+    01ab34cd56ef
+
+.. note:: If you need to reset the access key of your yubikeys, you can do this
+   by setting the *--newaccess* key to '0000000000'.
+
 
 Get the Authentication Items from a Yubikey in challenge Response mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
