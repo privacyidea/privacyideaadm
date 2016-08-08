@@ -1,3 +1,10 @@
+privacyideaadm (2.13-1) trusty; urgency=low
+
+  * add possibility to initialize a PKCS11 HSM
+  * Add access keys for yubikey
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Mon, 08 Aug 2016 09:30:00 +0200
+
 privacyideaadm (2.12~dev1-1) trusty; urgency=low
 
   * allow older requests libraries
