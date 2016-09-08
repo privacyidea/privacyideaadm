@@ -29,6 +29,7 @@ have privacyidea && _privacyidea() {
 			case "$cur" in
 				*) COMPREPLY=( $( compgen -W 'list init yubikey_mass_enroll daplug_mass_enroll \
 								etokenng_mass_enroll assign unassign import \
+								nitrokey_mass_enroll \
 								registration \
     								disable enable delete resync set' -- "$cur" ))
 				;;

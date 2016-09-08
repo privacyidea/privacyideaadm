@@ -36,6 +36,7 @@ _privacyidea() {
 		'yubikey_mass_enroll:enroll Yubikeys'
 		'daplug_mass_enroll:enroll daplug tokens'
 		'etokenng_mass_enroll:enroll eToken NG OTP'
+		'nitrokey_mass_enroll:enroll Nitrokeys in HOTP'
 		'registration:enroll registration token in one realm'
 		'-h:help'
 	    )
