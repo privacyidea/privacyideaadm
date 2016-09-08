@@ -7,7 +7,7 @@ info:
 	@echo "test		-- run tests"
 
 #VERSION=2.1~dev4
-VERSION=2.13
+VERSION=2.15~dev1
 
 pypi:
 	make man
@@ -37,13 +37,22 @@ builddeb:
 
 ppa-dev:
 	make debianize
-	(cd DEBUILD/privacyideaadm.org; debuild -S)
+	# build trusty
+	(cd DEBUILD/privacyideaadm.org; debuild -sa -S)
+	# build xenial
+	sed -e s/"trusty) trusty; urgency"/"xenial) xenial; urgency"/g debian/changelog > DEBUILD/privacyideaadm.org/debian/changelog
+	(cd DEBUILD/privacyideaadm.org; debuild -sa -S)
 	# Upload to launchpad:
 	dput ppa:privacyidea/privacyidea-dev DEBUILD/privacyideaadm_${VERSION}*_source.changes
 
 ppa:
 	make debianize
-	(cd DEBUILD/privacyideaadm.org; debuild -S)
+	# build trusty
+	(cd DEBUILD/privacyideaadm.org; debuild -sa -S)
+	# build xenial
+	sed -e s/"trusty) trusty; urgency"/"xenial) xenial; urgency"/g debian/changelog > DEBUILD/privacyideaadm.org/debian/changelog
+	(cd DEBUILD/privacyideaadm.org; debuild -sa -S)
+
 	dput ppa:privacyidea/privacyidea DEBUILD/privacyideaadm_${VERSION}-*_source.changes
 
 test:
