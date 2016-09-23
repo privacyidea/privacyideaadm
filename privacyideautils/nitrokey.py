@@ -94,7 +94,7 @@ class NitroKey(object):
             self.session_password = binascii.hexlify(os.urandom(8))
             r = self.nitrokey.NK_first_authenticate(password,
                                                     self.session_password)
-            if not self.session_password:
+            if r != 0:
                 raise Exception("Failed to login. {0!s}".format(r))
         else:
             raise Exception("No Nitrokey connected. {0!s}".format(device_connected))
