@@ -1,8 +1,8 @@
-privacyideaadm (2.15~dev1-1trusty) trusty; urgency=low
+privacyideaadm (2.15-1trusty) trusty; urgency=low
 
   * Add Nitrokey support (HOTP)
 
- -- Cornelius Kölbel <cornelius@privacyidea.org>  Mon, 05 Sep 2016 16:00:00 +0200
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Thu, 06 Oct 2016 08:30:00 +0200
 
 privacyideaadm (2.13-1) trusty; urgency=low
 
