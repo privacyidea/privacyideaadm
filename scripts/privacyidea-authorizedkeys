@@ -42,7 +42,9 @@ You need to create the following section:
    url = https://privacyidea
    admin = admin
    password = secret
-   
+   # nosslcheck = False
+   # hostname = <hostname>   
+
 """
 
 VERSION = '2.4'
@@ -76,22 +78,34 @@ def create_arguments():
 def main():
     args = create_arguments()
 
+    #Mandatory Settings
     try:
         config = ConfigParser.RawConfigParser()
         config.read(DEFAULT_CONFIG)
         url = config.get("Default", "url")
         admin = config.get("Default", "admin")
         password = config.get("Default", "password")
-        nosslcheck = config.get("Default", "nosslcheck")
+
     except Exception as ex:
         print "You need to provide the config file!"
         print ex
         sys.exit(1)
 
+    #Optional Settings
+    try:
+        nosslcheck = config.get("Default", "nosslcheck")
+    except:
+        nosslcheck = False
+
+    try:
+        hostname = config.get("Default", "hostname")
+    except:
+        hostname = socket.gethostname()
+
     # Create the privacyideaclient instance
     client = privacyideaclient(admin, password, url,
                                no_ssl_check=args.nosslcheck or nosslcheck)
-    params = {"hostname": socket.gethostname(),
+    params = {"hostname": hostname,
               "user": args.user}
     response = client.get("/machine/authitem/ssh", params)
     result = response.data.get("result")
