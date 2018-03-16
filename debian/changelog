@@ -1,3 +1,10 @@
+privacyideaadm (2.15.1-1trusty) trusty; urgency=low
+
+  * Fix otplen of Yubikey in Yubico mode
+  * make hostname and nosslcheck in ssh script optional
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Fri, 16 Mar 2016 15:30:00 +0200
+
 privacyideaadm (2.15-1trusty) trusty; urgency=low
 
   * Add Nitrokey support (HOTP)
