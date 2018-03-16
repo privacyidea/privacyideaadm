@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 #  privacyIDEA
+#  2018-03-16 Cornelius Kölbel <cornelius.koelbel@nektnights.it>
+#             Dario Salerno <info@dariosalerno.com>
+#             Make nosslcheck and hostname optional
 #  2015-03-05 Cornelius Kölbel, <cornelius@privacyidea.org>
 #             Adapt authitems to new version 2.1
 #
@@ -47,7 +50,7 @@ You need to create the following section:
 
 """
 
-VERSION = '2.4'
+VERSION = '2.4.1'
 DEBUG = False
 DESCRIPTION = __doc__
 DEFAULT_CONFIG = "/etc/privacyidea/authorizedkeyscommand"
@@ -56,6 +59,7 @@ import argparse
 import socket
 from privacyideautils.clientutils import *
 import ConfigParser
+from ConfigParser import NoOptionError
 import sys
 import traceback
 
@@ -78,7 +82,7 @@ def create_arguments():
 def main():
     args = create_arguments()
 
-    #Mandatory Settings
+    # Mandatory Settings
     try:
         config = ConfigParser.RawConfigParser()
         config.read(DEFAULT_CONFIG)
@@ -91,15 +95,15 @@ def main():
         print ex
         sys.exit(1)
 
-    #Optional Settings
+    # Optional Settings
     try:
         nosslcheck = config.get("Default", "nosslcheck")
-    except:
+    except NoOptionEror:
         nosslcheck = False
 
     try:
         hostname = config.get("Default", "hostname")
-    except:
+    except NoOptionError:
         hostname = socket.gethostname()
 
     # Create the privacyideaclient instance
