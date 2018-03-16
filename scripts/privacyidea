@@ -104,7 +104,6 @@ def yubi_mass_enroll(lotpc,
     :param yubi_new_access_key: new access key
     """
     yp = YubikeyPlug()
-    print proc_params
     description = proc_params.description
     filename = proc_params.filename
     print filename
@@ -150,10 +149,8 @@ def yubi_mass_enroll(lotpc,
 
         elif yubi_mode == MODE_YUBICO:
             yubi_otplen = 32
-            if yubi_prefix_serial:
-                yubi_otplen = 32 + len(serial) * 2
-            elif yubi_prefix:
-                yubi_otplen = 32 + (len(yubi_prefix) * 2)
+            if prefix:
+                yubi_otplen = 32 + len(prefix) * 2
             elif yubi_prefix_random:
                 # default prefix length for MODE_YUBICO is 6
                 if yubi_prefix_random is None:
@@ -492,8 +489,6 @@ def yubikey_mass_enroll(args, client):
 
 def nitrokey_mass_enroll(args, client):
     NK = NitroKey()
-    print args
-    print client
 
     if args.nitromode == "TOTP":
         raise Exception("At the moment we only support HOTP.")
