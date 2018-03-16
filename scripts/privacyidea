@@ -150,7 +150,7 @@ def yubi_mass_enroll(lotpc,
         elif yubi_mode == MODE_YUBICO:
             yubi_otplen = 32
             if prefix:
-                yubi_otplen = 32 + len(prefix) * 2
+                yubi_otplen = 32 + len(prefix)
             elif yubi_prefix_random:
                 # default prefix length for MODE_YUBICO is 6
                 if yubi_prefix_random is None:
