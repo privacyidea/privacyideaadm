@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 #
+#  2018-04-08 Cornelius Kölbel <cornelius.koelbel@netknights.it>
+#             Add more response details on token enrollment
 #  2016-09-05 Cornelius Kölbel <cornelius.koelbel@netknights.it>
 #             Add nitrokey support
 #  2015-09-25 Cornelius Kölbel <cornelius@privacyidea.org>
@@ -58,6 +60,7 @@ import datetime
 import subprocess
 import getpass
 import binascii
+import qrcode
 from privacyideautils.clientutils import (showresult,
                                           dumpresult,
                                           privacyideaclient)
@@ -382,6 +385,8 @@ def inittoken(args, client):
     param = {}
     param["type"] = args.type
     param["otpkey"] = args.otpkey
+    if args.genkey:
+        param["genkey"] = 1
     if args.user:
         param["user"] = args.user
     if args.serial:
@@ -406,8 +411,17 @@ def inittoken(args, client):
               "SO PIN: ", tdata['userpin'], tdata['sopin'])
 
     resp = client.inittoken(param)
-    print resp.status
+    print("result: {0!s}".format(resp.status))
     showresult(resp.data)
+    if resp.status == 200:
+        if not param.get("serial"):
+            print("serial: {0!s}".format(resp.data.get("detail", {}).get("serial")))
+        if param.get("genkey"):
+            print("otpkey: {0!s}".format(resp.data.get("detail", {}).get("otpkey", {}).get("value")))
+            googleurl = resp.data.get("detail", {}).get("googleurl", {}).get("value")
+            qr = qrcode.QRCode()
+            qr.add_data(googleurl)
+            qr.print_ascii(tty=True)
 
 
 def get_users_token_num(client, user, realm):
@@ -990,6 +1004,8 @@ def create_arguments():
                              default="command line enrolled")
     p_inittoken.add_argument("--pin", help="The OTP PIN of the token.")
     p_inittoken.add_argument("--otpkey", help="The OTP key, like the HMAC key")
+    p_inittoken.add_argument("--genkey", help="Generate an HOTP key",
+                             action="store_true")
     p_inittoken.add_argument("--type", help="The token type",
                              choices=["hotp", "totp", "pw", "spass", "dpw",
                                       "ssh", "sms", "email", "yubico",
