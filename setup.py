@@ -4,7 +4,7 @@ import os
 import sys
 
 #VERSION="2.1dev4"
-VERSION = "2.15.1"
+VERSION = "2.22.1"
 
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
@@ -28,11 +28,13 @@ setup(name='privacyideaadm',
       author_email='cornelius@privacyidea.org',
       url='http://www.privacyidea.org',
       packages=['privacyideautils'],
-      install_requires=["requests", "pysqlite"],
+      install_requires=["requests",
+                        "pysqlite",
+                        #"usb",
+                        "qrcode"],
       scripts=['scripts/privacyidea',
                'scripts/privacyidea-luks-assign',
-	           'scripts/privacyidea-authorizedkeys'],
-#      install_requires=['usb'],
+               'scripts/privacyidea-authorizedkeys'],
       data_files=[('share/man/man1', ["doc/_build/man/privacyidea.1"])],
       license='AGPLv3',
       long_description=get_file_contents('DESCRIPTION')

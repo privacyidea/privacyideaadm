@@ -75,6 +75,25 @@ Top level commands are:
 EXAMPLES
 --------
 
+Enroll a Google Authenticator
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   privacyidea @secrets.txt token init --genkey
+
+This will enroll the default token type (usually HOTP) and generate
+the secret OTPKEY. It will print the QR Code at the tty to allow scanning
+the secret key.
+
+The file `secrets.txt` would look like this::
+
+   --password
+   topSecr3t
+   --url
+   https://your-server:443
+   --admin
+   admin@admin
+
+
 Enroll a Yubikey in challenge response mode
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
