@@ -98,7 +98,7 @@ def main():
     # Optional Settings
     try:
         nosslcheck = config.get("Default", "nosslcheck")
-    except NoOptionEror:
+    except NoOptionError:
         nosslcheck = False
 
     try:
