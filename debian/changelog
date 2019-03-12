@@ -1,3 +1,9 @@
+privacyideaadm (2.22.1-1trusty) trusty; urgency=low
+
+  * Make privacyideaadm work with Python 3
+
+ -- Cornelius Kölbel <cornelius@privacyidea.org>  Thu, 28 Mar 2019 14:30:00 +0200
+
 privacyideaadm (2.15.1-1trusty) trusty; urgency=low
 
   * Fix otplen of Yubikey in Yubico mode

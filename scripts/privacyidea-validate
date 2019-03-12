@@ -29,13 +29,14 @@ like this at the command line:
    @my-connection.txt
    
 """
-VERSION = "2.1"
-DESCRIPTION = __doc__
-
+from __future__ import print_function
 import argparse
 import sys
 import getpass
 import requests
+
+VERSION = "2.1"
+DESCRIPTION = __doc__
 
 
 def create_arguments():
@@ -98,13 +99,13 @@ def main():
 
     if result.get("status"):
         if result.get("value"):
-            print "User %s successfully authenticated" % args.user
+            print("User %s successfully authenticated" % args.user)
             sys.exit(0)
         else:
-            print "User %s failed to authenticate!" % args.user
+            print("User %s failed to authenticate!" % args.user)
             sys.exit(1)
     else:
-        print result.get("error").get("message")
+        print(result.get("error").get("message"))
 
 if __name__ == '__main__':
     main()

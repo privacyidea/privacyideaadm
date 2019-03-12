@@ -24,16 +24,15 @@
 This tool is used to fetch the offline authentication items for the given
 user on this machine.
 """
-
-VERSION = '2.2'
-DESCRIPTION = __doc__
-
 import getpass
 from privacyideautils.clientutils import *
 import socket
 import sys
 import argparse
 from privacyideautils.offline import save_auth_item
+
+VERSION = '2.2'
+DESCRIPTION = __doc__
 
 
 def create_arguments():
@@ -113,19 +112,19 @@ def main():
                 * user - the assigned user in the machine token
                 * username - the owner of the token
                 """
-                print "number of hashes: %s" % authitem.get("count")
-                print "local user: %s" % authitem.get("user")
-                print "token owner: %s" % authitem.get("username")
+                print("number of hashes: %s" % authitem.get("count"))
+                print("local user: %s" % authitem.get("user"))
+                print("token owner: %s" % authitem.get("username"))
                 #print "hashes: %s" % authitem.get("response")
                 save_auth_item(sqlfile, authitem)
     else:
         # False status
-        print result.get("error").get("message")
+        print(result.get("error").get("message"))
 
 
 if __name__ == '__main__':
     try:
         main()
     except Exception as ex:
-        print "Error: %s" % ex
+        print("Error: %s" % ex)
         sys.exit(5)

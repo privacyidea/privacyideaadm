@@ -49,19 +49,21 @@ You need to create the following section:
    # hostname = <hostname>   
 
 """
+from __future__ import print_function
+import argparse
+import socket
+from privacyideautils.clientutils import *
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+import sys
+import traceback
 
 VERSION = '2.4.1'
 DEBUG = False
 DESCRIPTION = __doc__
 DEFAULT_CONFIG = "/etc/privacyidea/authorizedkeyscommand"
-
-import argparse
-import socket
-from privacyideautils.clientutils import *
-import ConfigParser
-from ConfigParser import NoOptionError
-import sys
-import traceback
 
 
 def create_arguments():
@@ -84,26 +86,26 @@ def main():
 
     # Mandatory Settings
     try:
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read(DEFAULT_CONFIG)
         url = config.get("Default", "url")
         admin = config.get("Default", "admin")
         password = config.get("Default", "password")
 
     except Exception as ex:
-        print "You need to provide the config file!"
-        print ex
+        print("You need to provide the config file!")
+        print(ex)
         sys.exit(1)
 
     # Optional Settings
     try:
         nosslcheck = config.get("Default", "nosslcheck")
-    except NoOptionError:
+    except configparser.NoOptionError:
         nosslcheck = False
 
     try:
         hostname = config.get("Default", "hostname")
-    except NoOptionError:
+    except configparser.NoOptionError:
         hostname = socket.gethostname()
 
     # Create the privacyideaclient instance
@@ -122,9 +124,9 @@ def main():
             key = sshkey.get("sshkey")
             # print all keys for the requested user
             if user == args.user:
-                print "%s" % key
+                print("%s" % key)
     else:
-        print "error fetching list"
+        print("error fetching list")
 
 
 if __name__ == '__main__':

@@ -14,27 +14,30 @@
 This module is used for enrolling yubikey
 
 '''
-
 try:
     import yubico
     import yubico.yubikey
     import yubico.yubikey_defs
     from yubico.yubikey import YubiKeyError
     from usb import USBError
-except ImportError as  e:
-    print "python yubikey module not available."
-    print "please get it from https://github.com/Yubico/python-yubico if you want to enroll yubikeys"
-    print str(e)
+except ImportError as e:
+    print("python yubikey module not available.")
+    print("please get it from https://github.com/Yubico/python-yubico if you want to enroll yubikeys")
+    print(str(e))
     
 from time import sleep
 import sys
-import re, os, binascii
+import re
+import os
+import binascii
 try:
-    from Crypto.Cipher import AES
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
     CRYPTO_AVAILABLE = True
-except:
+except ImportError:
     CRYPTO_AVAILABLE = False
-    print "No pycrypto available. You can not enroll yubikeys with static password."
+    print("No cryptography package available. "
+          "You can not enroll yubikeys with static password.")
 
 MODE_YUBICO = 1
 MODE_OATH = 2
@@ -64,12 +67,16 @@ def create_static_password(key_hex):
     The msg_hex that is encoded with the aes key is '000000000000ffffffffffffffff0f2e'
     '''
     if not CRYPTO_AVAILABLE:
-        raise Exception("No pycrypto available. You can not enroll Yubikey with static password!")
+        raise Exception("No cryptography package available. "
+                        "You can not enroll Yubikey with static password!")
     
-    msg_hex="000000000000ffffffffffffffff0f2e"
+    msg_hex = "000000000000ffffffffffffffff0f2e"
     msg_bin = binascii.unhexlify(msg_hex)
-    aes = AES.new(binascii.unhexlify(key_hex), AES.MODE_ECB)
-    password_bin = aes.encrypt(msg_bin)
+    backend = default_backend()
+    cipher = Cipher(algorithms.AES(binascii.unhexlify(key_hex)), modes.ECB(),
+                    backend=backend)
+    encryptor = cipher.encryptor()
+    password_bin = encryptor.update(msg_bin) + encryptor.finalize()
     password = modhex_encode(password_bin)
     
     return password
@@ -215,13 +222,13 @@ def main():
                 ['outfile='])
 
     except GetoptError:
-        print "There is an error in your parameter syntax:"
-        print "o, outfile=    the name of the output file"
+        print("There is an error in your parameter syntax:")
+        print("o, outfile=    the name of the output file")
         sys.exit(1)
 
     for opt, arg in opts:
         if opt in ('o', '--outfile'):
-            print "setting output file : ", arg
+            print("setting output file : ", arg)
             OUTFILE = arg
 
     #
@@ -232,7 +239,7 @@ def main():
         #                                access_key = binascii.unhexlify('121212121212'),
         #                                unlock_key = binascii.unhexlify('121212121212'))
         otpkey, serial, fixed_string = enrollYubikey(debug=False)
-        print "Success: serial: %s, otpkey: %s." % (serial, otpkey)
+        print("Success: serial: %s, otpkey: %s." % (serial, otpkey))
         #
         # Now we write to a file
         #
@@ -243,10 +250,10 @@ def main():
         f.close()
 
     except yubico.yubico_exception.YubicoError as  e:
-        print "ERROR: %s" % str(e)
+        print("ERROR: %s" % str(e))
         sys.exit(1)
     except YubiError as e:
-        print "Error: %s" % e.value
+        print("Error: %s" % e.value)
 
 
 class YubikeyPlug(object):
@@ -268,7 +275,7 @@ class YubikeyPlug(object):
 
                 if serial != self.last_serial:
                     self.last_serial = serial
-                    print "\nFound Yubikey with serial %r\n" % serial
+                    print("\nFound Yubikey with serial %r\n" % serial)
                     found = True
                     break;
             except USBError:

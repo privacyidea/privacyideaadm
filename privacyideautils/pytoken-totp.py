@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 
 " HMAC-OTP Software Token "
+from __future__ import print_function
+from __future__ import division
 
-import os, sys, platform
+import sys
 import binascii
 import hmac
 from hashlib import sha1
@@ -11,7 +13,7 @@ import struct
 from getopt import getopt, GetoptError
 
 
-class HmacOtp:
+class HmacOtp(object):
     def __init__(self, key, counter=0, digits=6):
         self.key = key
         self.counter = counter
@@ -48,24 +50,21 @@ def main():
     OFFSET = 0
 
     def usage():
-       print "o, offset=      tokenoffset in seconds"
+       print("o, offset=      tokenoffset in seconds")
 
     try:
         opts, args = getopt(sys.argv[1:], "o:",
                 ['offset=', '--help'])
 
     except GetoptError:
-        print "There is an error in your parameter syntax:"
+        print("There is an error in your parameter syntax:")
         usage()
         sys.exit(1)
 
     for opt, arg in opts:
         if opt in ('o', '--offset'):
-            print "setting offset : ", arg
+            print("setting offset : ", arg)
             OFFSET = int(arg)
-
-
-
 
     from time import time
     counter = int((time() + OFFSET) / TIMESTEP + 0.5)
@@ -73,8 +72,8 @@ def main():
     key = binascii.a2b_hex(HEXKEY)
     otp = HmacOtp(key, counter=counter).generate()
 
-    print "Your OTP with number %d is %06d." % (counter, otp)
-    print "Happy Authenticating!"
+    print("Your OTP with number %d is %06d." % (counter, otp))
+    print("Happy Authenticating!")
 
 
 if __name__ == '__main__':

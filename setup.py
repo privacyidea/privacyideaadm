@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 from distutils.core import setup
 import os
 import sys
 
-#VERSION="2.1dev4"
 VERSION = "2.22.1"
 
 # Taken from kennethreitz/requests/setup.py
@@ -17,7 +17,7 @@ def get_file_contents(file_path):
         full_path = os.path.join(package_directory, file_path)
         content = open(full_path, 'r').read()
     except:
-        print >> sys.stderr, "### could not open file %r" % file_path
+        print("### could not open file {0!r}".format(file_path), file=sys.stderr)
     return content
 
 
@@ -29,8 +29,6 @@ setup(name='privacyideaadm',
       url='http://www.privacyidea.org',
       packages=['privacyideautils'],
       install_requires=["requests",
-                        "pysqlite",
-                        #"usb",
                         "qrcode",
                         "cffi",
                         "enum34"],

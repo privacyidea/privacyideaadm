@@ -56,6 +56,6 @@ ppa:
 	dput ppa:privacyidea/privacyidea DEBUILD/privacyideaadm_${VERSION}-*_source.changes
 
 test:
-	rm .coverage
+	rm -f .coverage
 	nosetests -v --with-coverage --cover-package=privacyideautils --cover-html tests/test_clientutils.py
 

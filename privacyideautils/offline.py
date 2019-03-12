@@ -64,7 +64,7 @@ def check_otp(user, otp, sqlfile="offlineotp.sqlite", window=10):
     for x in range(0, window):
         r = c.fetchone()
 
-        print r
+        print(r)
 
 
 def save_auth_item(sqlfile, authitem):
@@ -94,7 +94,7 @@ def save_auth_item(sqlfile, authitem):
     user = authitem.get("user")
     tokenowner = authitem.get("username")
 
-    for counter, otphash in authitem.get("response").iteritems():
+    for counter, otphash in authitem.get("response").items():
         # Insert the OTP hash
         c.execute("INSERT INTO authitems (counter, user, tokenowner, otp) "
                   "VALUES ('%s','%s','%s','%s')"
