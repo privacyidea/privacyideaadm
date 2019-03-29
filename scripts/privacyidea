@@ -52,6 +52,7 @@ like this at the command line:
 Thus you can avoid exposing secret credentials.
 """
 from __future__ import print_function
+from six.moves import input
 import argparse
 import sys
 import os
@@ -767,9 +768,10 @@ def machine_attachtoken(args, client):
     showresult(ret)
     if len(args.option) > 0:
         options = options_to_dict(args.option)
+        param.update(options)
         ret = client.connect("/machine/addoption",
                              {},
-                             param.update(options))
+                             param)
         showresult(ret)
 
 
@@ -790,9 +792,10 @@ def machine_addoption(args, client):
              "application": args.app}
     if len(args.option) > 0:
         options = options_to_dict(args.option)
+        param.update(options)
         ret = client.connect("/machine/addoption",
                              {},
-                             param.update(options))
+                             param)
         showresult(ret)
 
 
@@ -803,10 +806,11 @@ def machine_deloption(args, client):
              "application": args.app}
     if len(args.option) > 0:
         options = options_to_dict(args.option)
-        for k in list(options.keys()):
+        for k in options.keys():
+            param["key"] = k
             ret = client.connect("/machine/deloption",
                                  {},
-                                 param.update({"key": k}))
+                                 param)
             showresult(ret)
 
 
