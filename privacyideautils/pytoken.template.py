@@ -4,13 +4,14 @@
 " HMAC-OTP Software Token "
 from __future__ import print_function
 
-from builtins import str
-from builtins import object
-import os, sys, platform
+import os
+import sys
+import platform
 import binascii
 import hmac
 from hashlib import sha1
 import struct
+
 
 class HmacOtp(object):
     def __init__(self, key, counter=0, digits=6):

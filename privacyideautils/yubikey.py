@@ -30,6 +30,13 @@ import sys
 import re
 import os
 import binascii
+import codecs
+import string
+try:
+    maketrans = string.maketrans
+except AttributeError:
+    maketrans = bytes.maketrans
+
 try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -43,16 +50,15 @@ MODE_YUBICO = 1
 MODE_OATH = 2
 MODE_STATIC = 3
 
-hexHexChars = '0123456789abcdef'
-modHexChars = 'cbdefghijklnrtuv'
+hexHexChars = b'0123456789abcdef'
+modHexChars = b'cbdefghijklnrtuv'
 
-hex2ModDict = dict(zip(hexHexChars, modHexChars))
-mod2HexDict = dict(zip(modHexChars, hexHexChars))
+t_map = maketrans(hexHexChars, modHexChars)
+
 
 def modhex_encode(s):
-    return ''.join(
-        [ hex2ModDict[c] for c in s.encode('hex') ]
-    )
+    return binascii.hexlify(s).translate(t_map)
+
 
 class YubiError(Exception):
     def __init__(self, value):
@@ -149,24 +155,24 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, access_key=None,
             raise YubiError("privacyIDEA only supports the OATH challenge "
                             "Response mode at the moment!")
         else:
-            Cfg.mode_yubikey_otp(uid, 'h:' + key)
+            Cfg.mode_yubikey_otp(uid, b'h:' + key)
 
     elif mode == MODE_OATH:
         key = binascii.hexlify(os.urandom(20))
         if challenge_response:
-            Cfg.mode_challenge_response('h:' + key, type="HMAC")
+            Cfg.mode_challenge_response(b'h:' + key, type="HMAC")
         else:
             try:
                 # set hmac mode with key and 6 digits
                 # Try if we got 0.0.5
-                Cfg.mode_oath_hotp('h:' + key, digits=digits)
+                Cfg.mode_oath_hotp(b'h:' + key, digits=digits)
             except TypeError:
                 # We seem to have 0.0.4
-                Cfg.mode_oath_hotp('h:' + key, bytes=digits)
+                Cfg.mode_oath_hotp(b'h:' + key, bytes=digits)
 
     elif mode == MODE_STATIC:
         key = binascii.hexlify(os.urandom(16))
-        Cfg.aes_key('h:' + key)
+        Cfg.aes_key(b'h:' + key)
         Cfg.config_flag('STATIC_TICKET', True)
         
     else:
@@ -286,8 +292,6 @@ class YubikeyPlug(object):
                 sys.stdout.flush()
 
         return found
-
-
 
 
 if __name__ == "__main__":

@@ -1,13 +1,25 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from distutils.core import setup
+from setuptools import setup
+from setuptools.command.install import install
 import os
 import sys
 
-VERSION = "2.22.1"
+version = "2.23"
+name = 'privacyideaadm'
+release = '2.23.5'
 
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
+
+
+class InstallWithDoc(install):
+    def run(self):
+        self.run_command('build_sphinx')
+        install.run(self)
+
+
+cmdclass = {'install': InstallWithDoc}
 
 
 def get_file_contents(file_path):
@@ -21,20 +33,40 @@ def get_file_contents(file_path):
     return content
 
 
-setup(name='privacyideaadm',
-      version=VERSION,
+setup(name=name,
+      version=version,
       description='privacyIDEA admin Client',
       author='Cornelius Kölbel',
       author_email='cornelius@privacyidea.org',
       url='http://www.privacyidea.org',
       packages=['privacyideautils'],
-      install_requires=["requests",
-                        "qrcode",
-                        "cffi",
-                        "enum34"],
+      setup_requires=['sphinx <= 1.8.5;python_version<"3.0"',
+                      'sphinx >= 2.0;python_version>="3.0"'],
+      install_requires=[
+          "cffi",
+          "enum34",
+          "python-yubico",
+          "pyusb",
+          "qrcode",
+          "requests",
+          'six'
+      ],
+      cmdclass=cmdclass,
+      command_options={
+        'build_sphinx': {
+            'project': ('setup.py', name),
+            'version': ('setup.py', version),
+            'source_dir': ('setup.py', 'doc'),
+            'build_dir': ('setup.py', os.path.join('doc', '_build')),
+            'builder': ('setup.py', 'man')
+        }
+      },
       scripts=['scripts/privacyidea',
                'scripts/privacyidea-luks-assign',
-               'scripts/privacyidea-authorizedkeys'],
+               'scripts/privacyidea-authorizedkeys',
+               'scripts/privacyidea-check-offline-otp',
+               'scripts/privacyidea-get-offline-otp',
+               'scripts/privacyidea-validate'],
       data_files=[('share/man/man1', ["doc/_build/man/privacyidea.1"])],
       license='AGPLv3',
       long_description=get_file_contents('DESCRIPTION')
