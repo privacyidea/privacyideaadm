@@ -24,9 +24,9 @@ for user in users:
     try:
         resp = client.listtoken({"user": user,
                                  "realm": REALM})
-        print resp.data.get("result")
+        print(resp.data.get("result"))
     except PrivacyIDEAClientError:
-        print "User not found"
+        print("User not found")
 
 
 for user in USER_LIST:

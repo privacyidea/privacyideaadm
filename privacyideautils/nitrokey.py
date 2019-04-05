@@ -174,6 +174,6 @@ if __name__ == "__main__":
     Nk = NitroKey()
     Nk.admin_login("12345678")
     otp_key = Nk.init_hotp(2, "privadyidea")
-    print otp_key
-    print Nk.status()
+    print(otp_key)
+    print(Nk.status())
     Nk.logout()

@@ -33,7 +33,6 @@
 This is the module for providing the functions
 to enroll the Aladdin eToken NG OTP
 """
-
 from ctypes import *
 import binascii
 import random
@@ -193,8 +192,8 @@ class etng(object):
 
 
     if self.logging: self.log.info("[init] setting label to %s and RetryCounter to %s" % (self.label, self.retryCounter))
-    if self.debug: print "label: ", self.label
-    if self.debug: print "RetryCounter: ", self.retryCounter
+    if self.debug: print("label: ", self.label)
+    if self.debug: print("RetryCounter: ", self.retryCounter)
 
     self.tdata = { 'hmac':'', 'password':'', 'serial':'', 'error':'', 'sopassword':''}
 
@@ -227,8 +226,8 @@ class etng(object):
 
     (SlotID, nSlots) = getslotlist()
     if self.logging: self.log.info("[initpkcs11] number of slots: %d, slotid: %d" % (nSlots, SlotID))
-    if self.debug: print "Number of connected tokens: " , nSlots
-    if self.debug: print "SlotID: " , SlotID
+    if self.debug: print("Number of connected tokens: " , nSlots)
+    if self.debug: print("SlotID: " , SlotID)
 
     if nSlots > 1:
         raise etngError(2020, _("etng::initpkcs11 - There are more than one tokens connected (%s)") % nSlots)
@@ -258,41 +257,41 @@ class etng(object):
     # Start Initializing with SO PIN
     if self.logging: self.log.info ("[inittoken] token label: %s" % self.label)
     if self.logging: self.log.debug("[inittoken] sopw: %s" % self.sopw)
-    if self.debug: print "label: ", self.label
-    if self.debug: print "sopw:", self.sopw
-    if self.debug: print "session:", self.hSession
+    if self.debug: print("label: ", self.label)
+    if self.debug: print("sopw:", self.sopw)
+    if self.debug: print("session:", self.hSession)
     rv = self.etoken.ETC_InitTokenInit(0, self.sopw, len(self.sopw), 5, self.label, pointer(self.hSession))
     if rv:
         if self.logging: self.log.error("[inittoken] Failed to init token: %d" % rv)
-        if self.debug: print "Failed to init token init: " , rv
+        if self.debug: print("Failed to init token init: " , rv)
         rv = self.pkcs11error(rv)
         raise etngError(2001, _("etng::inittoken - Failed to init token (%s)") % rv)
     else:
         if self.logging: self.log.info("[inittoken] init token succesful")
-        if self.debug: print "session:", self.hSession
-        if self.debug: print "init token init succesful"
+        if self.debug: print("session:", self.hSession)
+        if self.debug: print("init token init succesful")
 
     if self.logging: self.log.debug("[inittoken] npw: %s" % self.npw)
-    if self.debug: print "npw  : ", self.npw
+    if self.debug: print("npw  : ", self.npw)
 
     rv = self.etoken.ETC_InitPIN (self.hSession, self.npw, len(self.npw), int(self.retryCounter), True)
     if rv:
         if self.logging: self.log.error("[inittoken] Failed User C_InitPin")
-        if self.debug: print "Failed User C_InitPin"
+        if self.debug: print("Failed User C_InitPin")
         rv = self.pkcs11error(rv)
         raise etngError(2002, _("etng::inittoken - Failed to ETC_InitPIN (%s)") % rv)
     else:
         if self.logging: self.log.info("[inittoken] C_InitPIN successful")
-        if self.debug: print "init token init User PIN succesful"
+        if self.debug: print("init token init User PIN succesful")
 
     rv = self.etoken.ETC_InitTokenFinal(self.hSession)
     if rv:
         if self.logging: self.log.error("[inittoken] Failed finalize InitTokenInit")
-        if self.debug: print "Failed to finalize InitTokenInit"
+        if self.debug: print("Failed to finalize InitTokenInit")
         raise etngError(2003, _("etng::inittoken - Failed to ETC_InitTokenFinal (%s)") % rv)
     else:
         if self.logging: self.log.info("[inittoken] finalize InitTokenInit successful")
-        if self.debug: print "init token init successfully finalized"
+        if self.debug: print("init token init successfully finalized")
 
     # End of Initializing with SO PIN
     # This closes the initialization session
@@ -313,16 +312,16 @@ class etng(object):
     rv = self.etpkcs11.C_Login(self.hSession, CKU_USER, self.pw, len(self.pw))
     if rv:
         if self.logging: self.log.error("[logintoken] C_Login failed")
-        if self.debug: print "Failed to login to token: " , rv
+        if self.debug: print("Failed to login to token: " , rv)
         raise etngError(2004, _("etng::logintoken - Failed to C_Login (%s)") % rv)
     else:
         if self.logging: self.log.info("[logintoken] C_Login successful")
-        if self.debug: print "Login succesful"
+        if self.debug: print("Login succesful")
 
   def deleteOTP(self):
     # Deleting existing OTP appliacion
     if self.logging: self.log.info("[deleteOTP] Deleting possible existing OTP application on the token")
-    if self.debug: print "Deleting possible existing OTP application on the token"
+    if self.debug: print("Deleting possible existing OTP application on the token")
     self.etsapi.SAPI_OTP_Destroy(self.hSession)
 
     # Creating random hmac key
@@ -335,22 +334,22 @@ class etng(object):
     #self.key = "12345678901234567890"
 
     if self.logging: self.log.info("[deleteOTP] I will create a new HMAC key with this keysize: %d" % len(self.key))
-    if self.debug: print "Sizeof key: ", len(self.key)
+    if self.debug: print("Sizeof key: ", len(self.key))
 
     rv = self.etpkcs11.C_GenerateRandom(self.hSession, self.key, c_ulong(len(self.key)))
     if rv:
         if self.logging: self.log.error("[deleteOTP] C_GenerateRandom failed %d" % rv)
-        if self.debug: print "C_GenerateRandom failed:", rv
+        if self.debug: print("C_GenerateRandom failed:", rv)
         raise etngError(2005, _("etng::deleteOTP - Failed to C_GenerateRandom (%s)") % rv)
     else:
         if self.logging: self.log.info("[deleteOTP] C_GenerateRandom successful")
         if self.logging: self.log.debug("[deleteOTP] New HMAC-Key: %s" % binascii.hexlify(self.key))
-        if self.debug: print "created random ", len(self.key), " byte HMAC key:", binascii.hexlify(self.key)
+        if self.debug: print("created random ", len(self.key), " byte HMAC key:", binascii.hexlify(self.key))
 
 
   def createAESKey(self):
     if self.logging: self.log.info("[createOTP] About to create new OTP object ")
-    if self.debug: print "Create new OTP object"
+    if self.debug: print("Create new OTP object")
 
     #keyClass = c_ulong(CKO_SECRET_KEY)
     dClass = c_ulong(CKO_SECRET_KEY)
@@ -389,17 +388,17 @@ class etng(object):
     if rv:
         rv = self.pkcs11error(rv)
         if self.logging: self.log.error("[createAES] SAPI_OTP_Create failed: %d " % rv)
-        if self.debug: print "Error creating AES object: ", rv
+        if self.debug: print("Error creating AES object: ", rv)
         raise etngError(2006, _("etng::createAES - Failed to etpkcs11.C_CreateObject (%s).") % rv)
     else:
         if self.logging: self.log.info("[createAES] C_CreateObject successful")
-        if self.debug: print "AES object created successfully"
+        if self.debug: print("AES object created successfully")
 
 
   def createOTP(self):
     # Creating new OTP object
     if self.logging: self.log.info("[createOTP] About to create new OTP object ")
-    if self.debug: print "Create new OTP object"
+    if self.debug: print("Create new OTP object")
 
     p_c_key = c_char_p(self.key)
     p_key = cast(p_c_key, c_void_p)
@@ -435,11 +434,11 @@ class etng(object):
     if rv:
         rv = self.pkcs11error(rv)
         if self.logging: self.log.error("[createOTP] SAPI_OTP_Create failed: %d " % rv)
-        if self.debug: print "Error creating OTP object: ", rv
+        if self.debug: print("Error creating OTP object: ", rv)
         raise etngError(2006, _("etng::createOTP - Failed to etsapi.SAPI_OTP_Create (%s). Maybe the token was initialized previously without HMAC support?") % rv)
     else:
         if self.logging: self.log.info("[createOTP] SAPI_OTP_Create successful")
-        if self.debug: print "OTP object created successfully"
+        if self.debug: print("OTP object created successfully")
 
   def finalize(self):
     # In fact we do not neet the CK_TOKEN_INFO Structure at the moment.
@@ -454,11 +453,11 @@ class etng(object):
     rv = self.etpkcs11.C_GetTokenInfo(0, p_tokeninfo)
     if rv:
         if self.logging: self.log.error("[finalize] Error getting TokenInfo: %d" % rv)
-        if self.debug: print "Error getting TokenInfo: ", rv
+        if self.debug: print("Error getting TokenInfo: ", rv)
         raise etngError(2007, _("etng::Finalize - Failed to C_GetTokenInfo (%s)") % rv)
     else:
         if self.logging: self.log.info("[finalize] getting TokenInfo successful ")
-        if self.debug: print "Got Token info successfully"
+        if self.debug: print("Got Token info successfully")
 
     # FIXME: We should make this more robust and use the structure
     _tiLabel = self.unpad(tInfo[0:31])
@@ -470,22 +469,22 @@ class etng(object):
     rv = self.etpkcs11.C_Finalize(0)
     if rv:
         if self.logging: self.log.error("[finalize] Error finalizing Token %d" % rv)
-        if self.debug: print "Error finalizing Token: ", rv
+        if self.debug: print("Error finalizing Token: ", rv)
         raise etngError(2007, _("etng::Finalize - Failed to finalize token (%s)") % rv)
     else:
         if self.logging: self.log.info("[finalize] Token finalized successful ")
-        if self.debug: print "Token finalized successfully"
+        if self.debug: print("Token finalized successfully")
 
     if self.logging: self.log.debug("[finalize] Token was created with the data HMAC-key (" +
                     binascii.hexlify(self.key) +
                     "), Serial (" + serial +
                     "), PIN (" + self.password +
                     "), SO PIN (" + self.sopw + "). YOU ASKED FOR IT! ;-)")
-    if self.debug: print "Your data:"
-    if self.debug: print " HMAC-key  : ", binascii.hexlify(self.key)
-    if self.debug: print " Serial    : ", serial
-    if self.debug: print " eToken PIN: ", self.password
-    if self.debug: print " SO PIN    : ", self.sopw
+    if self.debug: print("Your data:")
+    if self.debug: print(" HMAC-key  : ", binascii.hexlify(self.key))
+    if self.debug: print(" Serial    : ", serial)
+    if self.debug: print(" eToken PIN: ", self.password)
+    if self.debug: print(" SO PIN    : ", self.sopw)
 
     self.tdata = { 'hmac' : binascii.hexlify(self.key), 'serial':serial, 'userpin':self.password, 'sopin':self.sopw }
     return self.tdata
@@ -515,17 +514,17 @@ def initetng(param={ 'label': 'newToken'}):
 
     enroller = etng(param)
 
-    print _("initialize pkcs11 interface") if debug else '',
+    print(_("initialize pkcs11 interface")) if debug else ''
     enroller.initpkcs11()
-    print _("initialize token")  if debug else '',
+    print(_("initialize token")) if debug else ''
     enroller.inittoken()
-    print _("login to token") if debug else '',
+    print(_("login to token")) if debug else ''
     enroller.logintoken()
-    print _("delete old OTP application") if debug else '',
+    print(_("delete old OTP application")) if debug else ''
     enroller.deleteOTP()
-    print _("create new OTP application") if debug else '',
+    print(_("create new OTP application")) if debug else ''
     enroller.createOTP()
-    print _("Creating AES key") if debug else '',
+    print(_("Creating AES key")) if debug else ''
     #enroller.createAESKey()
     #print _("finalizing token") if debug else '',
     tdata = enroller.finalize()

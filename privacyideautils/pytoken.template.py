@@ -2,14 +2,18 @@
 # -*- coding: utf-8 -*-
 
 " HMAC-OTP Software Token "
+from __future__ import print_function
 
-import os, sys, platform
+import os
+import sys
+import platform
 import binascii
 import hmac
 from hashlib import sha1
 import struct
 
-class HmacOtp:
+
+class HmacOtp(object):
     def __init__(self, key, counter=0, digits=6):
         self.key = key
         self.counter = counter
@@ -44,16 +48,16 @@ def main():
 
     system = platform.system()
     if system == "Linux":
-	counter_file = os.path.join(os.getenv("HOME"), ".pytoken-counter")
+        counter_file = os.path.join(os.getenv("HOME"), ".pytoken-counter")
     elif system == "Windows":
         counter_file = os.path.join(os.getenv("HOMEDRIVE"), os.getenv("HOMEPATH"), "\pytoken-counter")
     else:
-        print "I do not know your operating system"
+        print("I do not know your operating system")
         sys.exit(1)
 
 
     if os.path.exists(counter_file):
-        counter = int(file(counter_file).read().strip()) + 1
+        counter = int(open(counter_file).read().strip()) + 1
     else:
         counter = 0
 
@@ -62,10 +66,10 @@ def main():
     key = binascii.a2b_hex(hexkey)
     otp = HmacOtp(key, counter=counter).generate()
 
-    print "Your OTP with number %d is %06d." % (counter, otp)
-    print "Happy Authenticating!"
+    print("Your OTP with number %d is %06d." % (counter, otp))
+    print("Happy Authenticating!")
 
-    file(counter_file, 'w').write(str(counter))
+    open(counter_file, 'w').write(str(counter))
 
 if __name__ == '__main__':
     main()

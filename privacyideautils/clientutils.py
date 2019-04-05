@@ -10,6 +10,8 @@
 #  contact:  http://www.linotp.org
 #            http://www.lsexperts.de
 #            linotp@lsexperts.de
+from __future__ import print_function
+
 __doc__ = """
 This module is used for the communication of
 the python based management clients "privacyidea"
@@ -18,10 +20,6 @@ the python based management clients "privacyidea"
 import logging.handlers
 import pprint
 import requests
-
-from etokenng import (etng,
-                      etngError)
-
 import gettext
 
 _ = gettext.gettext
@@ -49,9 +47,9 @@ ldap_opts_map = {'rl_uri': 'LDAPURI',
 def showresult(rv):
     try:
         pp = pprint.PrettyPrinter(indent=4)
-        print pp.pformat(rv['result'])
+        print(pp.pformat(rv['result']))
     except:
-        print rv
+        print(rv)
 
 
 class PrivacyIDEAClientError(Exception):
@@ -318,7 +316,7 @@ def dumpresult(status, data, tabformat=None):
 
     # if not result['status']:
     if not status:
-        print "The return status is false"
+        print("The return status is false")
     else:
 
         head = tabentry
@@ -328,7 +326,7 @@ def dumpresult(status, data, tabformat=None):
             for i in range(0, len(head)):
                 tabvisible.append(i)
         if len(tabhead) < len(head):
-            print "tabhead " + str(len(tabhead)) + " head " + str(len(head))
+            print("tabhead " + str(len(tabhead)) + " head " + str(len(head)))
             for i in range(0, len(head)):
                 tabhead.append('head')
         if len(tabsize) < len(head):
@@ -343,9 +341,9 @@ def dumpresult(status, data, tabformat=None):
 
         i = 0
         for t in tabhead:
-            print tabstr[i] % str(t)[:tabsize[i]], tabdelim,
+            print(tabstr[i] % str(t)[:tabsize[i]], tabdelim, end=' ')
             i = i + 1
-        print
+        print()
 
         for token in data:
             i = 0
@@ -353,8 +351,8 @@ def dumpresult(status, data, tabformat=None):
                 # print tabstr[i] % str(token.get(t)).endcode('utf-8') [:tabsize[i]], tabdelim,
                 # text=str(token.get(t)).encode('utf-8')
                 text = token.get(t)
-                if not type(token.get(t)) == unicode:
+                if not type(token.get(t)) == str:
                     text = str(token.get(t))
-                print tabstr[i] % text[:tabsize[i]], tabdelim,
+                print(tabstr[i] % text[:tabsize[i]], tabdelim, end=' ')
                 i = i + 1
-            print
+            print()

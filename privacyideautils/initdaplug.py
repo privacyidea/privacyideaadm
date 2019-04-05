@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
 import binascii
 import os
 KEY = "@ABCDEFGHIJKLMNO"
@@ -33,13 +36,13 @@ def _delete_HOTP(dongle):
     try:
         dongle.deleteKeys([hotpKeyVersion])
     except DaplugException as e:
-        print e
+        print(e)
         pass
     try:
         dongle.selectFile(0xC010)
         dongle.deleteFileOrDir(counterFile)
     except DaplugException as e:
-        print e
+        print(e)
         pass
     try:
         dongle.setKeyboardAtBoot(False)
