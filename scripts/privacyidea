@@ -401,6 +401,16 @@ def inittoken(args, client):
     if args.pin:
         param["pin"] = args.pin
 
+    if param["type"] == "certificate":
+        if args.request:
+            param["request"] = args.request
+        elif args.requestfile:
+            with open(args.requestfile) as f:
+                req = f.read()
+            param["request"] = req
+        if args.ca:
+            param["ca"] = args.ca
+
     if args.etng:
         tokenlabel = args.user or args.label
         tdata = initetng({'label': tokenlabel,
@@ -1017,10 +1027,17 @@ def create_arguments():
     p_inittoken.add_argument("--type", help="The token type",
                              choices=["hotp", "totp", "pw", "spass", "dpw",
                                       "ssh", "sms", "email", "yubico",
-                                      "registration"],
+                                      "registration", "certificate"],
                              default="hotp")
     p_inittoken.add_argument("--etng", help="If specified, an etoken NG will "
                              "be initialized", action="store_true")
+    p_inittoken.add_argument("--request", help="If a certificate token is enrolled, "
+                                               "specify the CSR in PEM format.")
+    p_inittoken.add_argument("--requestfile", help="If a certificate token is enrolled, "
+                                                   "specify the CSR file in PEM format.")
+    p_inittoken.add_argument("--ca", help="If a certificate token is enrolled, "
+                                          "specify the CA configuration that should be used "
+                                          "to sign the CSR.")
     # registration_enroll
     # Will enroll a registration token to each user in a realm, who has now
     # token, yet.
