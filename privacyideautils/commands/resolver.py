@@ -24,6 +24,7 @@ from privacyideautils.clientutils import (showresult,
                                           privacyideaclient,
                                           __version__)
 
+
 @click.group()
 @click.pass_context
 def resolver(ctx):
@@ -73,8 +74,3 @@ def set(ctx, resolver, type, filename):
     else:
         print("Resolver Type currently not supported.")
     showresult(response.data)
-
-
-
-
-

@@ -25,6 +25,7 @@ from privacyideautils.clientutils import (showresult,
                                           __version__)
 from privacyideautils.clientutils import PrivacyIDEAClientError
 
+
 @click.group()
 @click.pass_context
 def certificate(ctx):

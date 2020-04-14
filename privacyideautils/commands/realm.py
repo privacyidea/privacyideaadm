@@ -24,6 +24,7 @@ from privacyideautils.clientutils import (showresult,
                                           privacyideaclient,
                                           __version__)
 
+
 @click.group()
 @click.pass_context
 def realm(ctx):
@@ -42,6 +43,7 @@ def list(ctx):
     client = ctx.obj["pi_client"]
     response = client.getrealms()
     showresult(response.data)
+
 
 @realm.command()
 @click.option("--realm", help="The name of the new realm.", required=True)

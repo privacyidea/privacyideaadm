@@ -24,6 +24,7 @@ from privacyideautils.clientutils import (showresult,
                                           privacyideaclient,
                                           __version__)
 
+
 @click.group()
 @click.pass_context
 def user(ctx):
@@ -59,4 +60,3 @@ def list(ctx):
                {'tabsize': tabsize, 'tabstr': tabstr,
                 'tabdelim': tabdelim, 'tabvisible': tabvisible,
                 'tabhead': tabhead, 'tabentry': tabentry})
-

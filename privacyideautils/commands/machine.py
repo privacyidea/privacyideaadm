@@ -214,6 +214,3 @@ def delete_option(ctx, hostname, serial, application, option):
             param["key"] = k
             ret = client.post("/machine/deloption", param)
             showresult(ret)
-
-
-

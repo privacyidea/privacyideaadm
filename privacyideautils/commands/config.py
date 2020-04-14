@@ -24,6 +24,7 @@ from privacyideautils.clientutils import (showresult,
                                           privacyideaclient,
                                           __version__)
 
+
 @click.group()
 @click.pass_context
 def config(ctx):

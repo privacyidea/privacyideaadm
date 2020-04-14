@@ -24,6 +24,7 @@ from privacyideautils.clientutils import (showresult,
                                           privacyideaclient,
                                           __version__)
 
+
 @click.group()
 @click.pass_context
 def audit(ctx):
@@ -31,6 +32,7 @@ def audit(ctx):
     Manage the audit log. Basically fetch audit information.
     """
     pass
+
 
 @audit.command()
 @click.pass_context
@@ -66,4 +68,3 @@ def list(ctx, page, rp, sortname, sortorder, query, qtype):
     for row in auditdata:
         print(row)
     print("Total: {0!s}".format(count))
-

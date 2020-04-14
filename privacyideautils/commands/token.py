@@ -85,12 +85,11 @@ def cifs_push(config, text):
     try:
         os.remove(FILENAME)
     except Exception as e:
-        print ("couldn't remove push test file: %r" % e)
-
+        print("couldn't remove push test file: %r" % e)
 
 
 def sendmail(config, text):
-    '''
+    """
     Send an email with the text
 
     :param config: dictionary with the fields mail_from, mail_to, mail_host,
@@ -98,8 +97,7 @@ def sendmail(config, text):
     :type config: dict
     :param text: text to be sent via mail
     :type text: string
-
-    '''
+    """
     if not config.get("mail_to"):
         Exception("mail_to required!")
 
@@ -179,6 +177,7 @@ def list(ctx, user, serial, csv, export_fields, mail_host, mail_to,
             result = r1['result']
             dumpresult(result['status'],
                        result['value']['tokens'])
+
 
 @token.command()
 @click.pass_context
@@ -312,6 +311,7 @@ def registration(ctx, realm, dump, mail_host, mail_from, mail_subject,
                       "mail_user": mail_user,
                       "mail_password": mail_password}
             sendmail(config, mail_body % token)
+
 
 @token.command()
 @click.pass_context
@@ -491,6 +491,7 @@ def nitrokey_mass_enroll(ctx, nitromode, slot, description, pin, digits, slotnam
 
     NK.logout()
 
+
 @token.command()
 @click.pass_context
 @click.option("-k", "--keyboard", is_flag=True,
@@ -520,6 +521,7 @@ def daplug_mass_enroll(ctx, keyboard, hidmap, otplen):
         param["description"] = "daplug dongle"
         r1 = client.inittoken(param)
         showresult(r1)
+
 
 @token.command()
 @click.pass_context
@@ -557,6 +559,7 @@ def etokenng_mass_enroll(ctx, label, description):
         r1 = client.inittoken(param)
         showresult(r1)
 
+
 @token.command()
 @click.pass_context
 @click.option("--serial", help="Serial number of the token to assign", required=True)
@@ -583,6 +586,7 @@ def unassigntoken(ctx, serial):
     client = ctx.obj["pi_client"]
     response = client.unassigntoken({"serial": serial})
     showresult(response.data)
+
 
 @token.command()
 @click.pass_context
@@ -630,6 +634,7 @@ def enabletoken(ctx, serial, user):
         param["user"] = user
     response = client.enabletoken(param)
     showresult(response.data)
+
 
 @token.command()
 @click.pass_context
@@ -759,4 +764,3 @@ def set(ctx, serial, user, pin, otplen, syncwindow, maxfailcount, counterwindow,
 
     response = client.set(param)
     showresult(response.data)
-
