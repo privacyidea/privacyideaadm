@@ -5,9 +5,9 @@ from setuptools.command.install import install
 import os
 import sys
 
-version = "2.23"
+version = "3.0"
 name = 'privacyideaadm'
-release = '2.23.5'
+release = '3.0'
 
 # Taken from kennethreitz/requests/setup.py
 package_directory = os.path.realpath(os.path.dirname(__file__))
@@ -39,7 +39,8 @@ setup(name=name,
       author='Cornelius Kölbel',
       author_email='cornelius@privacyidea.org',
       url='http://www.privacyidea.org',
-      packages=['privacyideautils'],
+      packages=['privacyideautils',
+                'privacyideautils.commands'],
       setup_requires=['sphinx <= 1.8.5;python_version<"3.0"',
                       'sphinx >= 2.0;python_version>="3.0"'],
       install_requires=[
@@ -49,7 +50,9 @@ setup(name=name,
           "pyusb",
           "qrcode",
           "requests",
-          'six'
+          'six',
+          "click",
+          "python-yubico"
       ],
       cmdclass=cmdclass,
       command_options={

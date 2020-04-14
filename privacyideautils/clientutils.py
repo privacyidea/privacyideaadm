@@ -21,9 +21,11 @@ import logging.handlers
 import pprint
 import requests
 import gettext
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 _ = gettext.gettext
 
+__version__ = 3.0
 TIMEOUT = 5
 etng = False
 
@@ -90,6 +92,8 @@ class privacyideaclient(object):
         self.baseuri = baseuri
         self.log = logging.getLogger('privacyideaclient')
         self.verify_ssl = not no_ssl_check
+        if not self.verify_ssl:
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         # Do the first server communication and retrieve the auth token
         self.set_credentials(username, password)
 
