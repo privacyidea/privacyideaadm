@@ -29,6 +29,7 @@ from time import sleep
 import sys
 import re
 import os
+import six
 import binascii
 import codecs
 import string
@@ -46,9 +47,9 @@ except ImportError:
     print("No cryptography package available. "
           "You can not enroll yubikeys with static password.")
 
-MODE_YUBICO = 1
-MODE_OATH = 2
-MODE_STATIC = 3
+MODE_YUBICO = "YUBICO"
+MODE_OATH = "OATH"
+MODE_STATIC = "STATIC"
 
 hexHexChars = b'0123456789abcdef'
 modHexChars = b'cbdefghijklnrtuv'
@@ -56,7 +57,16 @@ modHexChars = b'cbdefghijklnrtuv'
 t_map = maketrans(hexHexChars, modHexChars)
 
 
+def to_bytes(s):
+    if isinstance(s, bytes):
+        return s
+    elif isinstance(s, six.text_type):
+        return s.encode('utf8')
+    return s
+
+
 def modhex_encode(s):
+    s = to_bytes(s)
     return binascii.hexlify(s).translate(t_map)
 
 
@@ -114,6 +124,7 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, access_key=None,
     
     :return: tuple of key, serial, fixed_string
     """
+    print("Initializing Yubikey in mode {0!s}.".format(mode))
     YK = yubico.yubikey.find_key(debug=debug)
     firmware_version = YK.version()
     serial = "%08d" % YK.serial()
@@ -176,7 +187,7 @@ def enrollYubikey(digits=6, APPEND_CR=True, debug=False, access_key=None,
         Cfg.config_flag('STATIC_TICKET', True)
         
     else:
-        YubiError("Unknown OTP mode specified.")
+        raise YubiError("Unknown OTP mode specified.")
 
     # Do the fixed string:
     if prefix_serial:

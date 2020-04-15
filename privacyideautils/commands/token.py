@@ -20,6 +20,7 @@ import click
 import datetime
 import logging
 import qrcode
+import sys
 from privacyideautils.clientutils import (showresult,
                                           dumpresult,
                                           privacyideaclient,
@@ -32,11 +33,6 @@ from privacyideautils.yubikey import (enrollYubikey, YubikeyPlug,
                                       MODE_OATH, MODE_STATIC)
 from email.mime.text import MIMEText
 import smtplib
-
-
-mode_string_mapping = {"YUBICO": MODE_YUBICO,
-                       "OATH": MODE_OATH,
-                       "STATIC": MODE_STATIC}
 
 
 def cifs_push(config, text):
@@ -326,7 +322,7 @@ def registration(ctx, realm, dump, mail_host, mail_from, mail_subject,
                    "the yubikey as prefix.", is_flag=True)
 @click.option("--yubimode", help="The mode the yubikey should "
                                  "be initialized in. (default=OATH)",
-              type=click.Choice(["OATH", "YUBICO", "STATIC"]),
+              type=click.Choice([MODE_OATH, MODE_YUBICO, MODE_STATIC]),
               default="OATH")
 @click.option("--filename",
               help="If the initialized yubikeys should not be "
@@ -337,10 +333,12 @@ def registration(ctx, realm, dump, mail_host, mail_from, mail_subject,
                                  "is initialized (default=1)",
               type=click.Choice(["1", "2"]),
               default="1")
-@click.option("--yubiCR",
+@click.option("--yubicr",
               help="Initialize the yubikey in challenge/"
                    "response mode.",
               is_flag=True)
+@click.option("--realm",
+              help="Enroll the yubikey to the given realm.")
 @click.option("--description", help="The description of the "
                                     "token. This can be used to identify the token "
                                     "more easily.",
@@ -354,7 +352,7 @@ def registration(ctx, realm, dump, mail_host, mail_from, mail_subject,
                    "You can reset the access key by setting the "
                    "new access key to '000000000000'.")
 def yubikey_mass_enroll(ctx, yubiprefix, yubiprefixrandom, yubiprefixserial,
-                        yubimode, filename, yubislot, yubiCR, description, access, newaccess):
+                        yubimode, filename, yubislot, yubicr, description, access, newaccess, realm):
     """
     Initialize a bunch of yubikeys
     """
@@ -367,13 +365,13 @@ def yubikey_mass_enroll(ctx, yubiprefix, yubiprefixrandom, yubiprefixserial,
         _ret = yp.wait_for_new_yubikey()
         otpkey, serial, prefix = enrollYubikey(
             debug=False,
-            APPEND_CR=not yubiCR,
+            APPEND_CR=not yubicr,
             prefix_serial=yubiprefixserial,
             fixed_string=yubiprefix,
             len_fixed_string=yubiprefixrandom,
             slot=int(yubislot),
             mode=yubimode,
-            challenge_response=yubiCR,
+            challenge_response=yubicr,
             access_key=access,
             new_access_key=newaccess)
         if yubimode == MODE_OATH:
@@ -386,7 +384,7 @@ def yubikey_mass_enroll(ctx, yubiprefix, yubiprefixrandom, yubiprefixserial,
                             'description': description,
                             'otplen': 6,
                             'yubikey.prefix': prefix}
-            if yubiCR:
+            if yubicr:
                 submit_param['type'] = 'TOTP'
                 submit_param['timeStep'] = 30
 
@@ -419,11 +417,8 @@ def yubikey_mass_enroll(ctx, yubiprefix, yubiprefixrandom, yubiprefixserial,
                             'description': description,
                             'yubikey.prefix': prefix}
 
-        else:
-            print("Unknown Yubikey mode")
-            pass
-        if 'realm' in proc_params:
-            submit_param['realm'] = proc_params.get('realm')
+        if realm:
+            submit_param['realm'] = realm
 
         if filename:
             # Now we write the data to a file
