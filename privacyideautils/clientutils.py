@@ -138,21 +138,21 @@ class privacyideaclient(object):
 
     def get(self, uripath, param=None):
         r = requests.get("%s%s" % (self.baseuri, uripath),
-                         headers={"Authorization": self.auth_token},
+                         headers={"PI-Authorization": self.auth_token},
                          params=param,
                          verify=self.verify_ssl)
         return self._send_response(r)
 
     def post(self, uripath, param=None):
         r = requests.post("%s%s" % (self.baseuri, uripath),
-                          headers={"Authorization": self.auth_token},
+                          headers={"PI-Authorization": self.auth_token},
                           data=param,
                           verify=self.verify_ssl)
         return self._send_response(r)
 
     def delete(self, uripath):
         r = requests.delete("%s%s" % (self.baseuri, uripath),
-                            headers={"Authorization": self.auth_token},
+                            headers={"PI-Authorization": self.auth_token},
                             verify=self.verify_ssl)
         return self._send_response(r)
 
