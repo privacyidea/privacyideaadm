@@ -136,9 +136,9 @@ class privacyideaclient(object):
             if result.get("status") is True:
                 self.auth_token = result.get("value", {}).get("token")
                 if self.pi_authorization:
-                    self.headers = {"Authorization": self.auth_token}
-                else:
                     self.headers = {"PI-Authorization": self.auth_token}
+                else:
+                    self.headers = {"Authorization": self.auth_token}
         else:
             raise Exception("Invalid Credentials: %s" % r.status_code)
 
