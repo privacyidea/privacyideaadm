@@ -47,10 +47,14 @@ OPTIONS
                         second line the password itself and add this to the
                         command line with @password.txt
   -v, --version         Print the version of the program.
-  --nosslcheck          The ssl certificate is not checked.
+  -n, --nosslcheck      The ssl certificate is not checked.
                         **Only use this, if you know what you are doing**.
                         You should use an SSL certificate from a **really**
                         trusted CA.
+  --pi-authorization
+                        Use the PI-Authorization header instead of Authorization header.
+                        This may avoid conflicts with default authorization data set in
+                        a `netrc <https://www.gnu.org/software/inetutils/manual/html_node/The-_002enetrc-file.html>`_ file.
 
 COMMANDS
 --------
@@ -62,8 +66,10 @@ You can get help at each level by appending the parameter -h.
 
 Top level commands are:
 
-  * user: list the available users.
-  * token: token commands used to list tokens, assign, enroll, resync ...
+  * audit: receive the audit log
+  * certificate: create and sign certificates
+  * user: list the available users
+  * token: token commands used to list tokens, assign, enroll, resync, yubikey mass enroll, ...
   * machine: machine commands used to list machines and assign tokens and
     applications to these machines
   * securitymodule: Get the status of the securitymodule or set the password
