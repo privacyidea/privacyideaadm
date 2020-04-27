@@ -83,15 +83,17 @@ class privacyideaclient(object):
     """
 
     def __init__(self, username, password, baseuri="http://localhost:5000",
-                 no_ssl_check=False):
+                 no_ssl_check=False, pi_authorization=False):
         """
         :param baseuri: The base of the server like http://localhost:5000
         :type baseuri: basestring
         """
         self.auth_token = None
+        self.headers = None
         self.baseuri = baseuri
         self.log = logging.getLogger('privacyideaclient')
         self.verify_ssl = not no_ssl_check
+        self.pi_authorization = pi_authorization
         if not self.verify_ssl:
             requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
         # Do the first server communication and retrieve the auth token
@@ -133,26 +135,30 @@ class privacyideaclient(object):
             result = res.get("result")
             if result.get("status") is True:
                 self.auth_token = result.get("value", {}).get("token")
+                if self.pi_authorization:
+                    self.headers = {"PI-Authorization": self.auth_token}
+                else:
+                    self.headers = {"Authorization": self.auth_token}
         else:
             raise Exception("Invalid Credentials: %s" % r.status_code)
 
     def get(self, uripath, param=None):
         r = requests.get("%s%s" % (self.baseuri, uripath),
-                         headers={"Authorization": self.auth_token},
+                         headers=self.headers,
                          params=param,
                          verify=self.verify_ssl)
         return self._send_response(r)
 
     def post(self, uripath, param=None):
         r = requests.post("%s%s" % (self.baseuri, uripath),
-                          headers={"Authorization": self.auth_token},
+                          headers=self.headers,
                           data=param,
                           verify=self.verify_ssl)
         return self._send_response(r)
 
     def delete(self, uripath):
         r = requests.delete("%s%s" % (self.baseuri, uripath),
-                            headers={"Authorization": self.auth_token},
+                            headers=self.headers,
                             verify=self.verify_ssl)
         return self._send_response(r)
 

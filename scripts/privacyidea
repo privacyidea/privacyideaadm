@@ -99,8 +99,11 @@ def print_version(ctx, param, value):
               help='The password of the user')
 @click.option('-n', '--nosslcheck',
               help='Do not check the SSL certificate', is_flag=True)
+@click.option('--pi-authorization',
+              help='Use the PI-Authorization header instead of Authorization header.',
+              is_flag=True)
 @click.pass_context
-def cli(ctx, url, admin, password, nosslcheck):
+def cli(ctx, url, admin, password, nosslcheck, pi_authorization):
     """
     Manage your tokens on the privacyIDEA server
 
@@ -111,7 +114,8 @@ def cli(ctx, url, admin, password, nosslcheck):
       $ privacyidea -U https://yourserver -a user token init
 
     """
-    client = privacyideaclient(admin, password, url, no_ssl_check=nosslcheck)
+    client = privacyideaclient(admin, password, url,
+                               no_ssl_check=nosslcheck, pi_authorization=pi_authorization)
     ctx.obj["pi_client"] = client
 
 
