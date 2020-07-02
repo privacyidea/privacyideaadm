@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
+
 import unittest
-import json
 import privacyideautils.clientutils as clientutils
 from privacyideautils.clientutils import PrivacyIDEAClientError
 
 
 PWFILE = "/home/cornelius/src/flask/tests/testdata/passwords"
+
 
 class TestClientUtils(unittest.TestCase):
 
