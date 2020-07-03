@@ -316,7 +316,6 @@ def main():
 |            Proper Certificate checking can NOT be guaranteed!             |
 |        Currently all (generated) certs will be written out to ease        |
 |                         development and debugging.                        |
-| One day this script might also become part of the privacyIDEA admin tool. |
 |                                                                           |
 +--- WARNING ------ WARNING ------ WARNING ------ WARNING ------ WARNING ---+
 """)
