@@ -47,14 +47,10 @@ setup(name=name,
           "cffi",
           "click",
           "cryptography",
-          "enum34",
-          "pyscard",
           "python-yubico",
-          "pyusb",
           "qrcode",
           "requests",
-          "six",
-          "yubikey-manager"
+          "six"
       ],
       cmdclass=cmdclass,
       command_options={
