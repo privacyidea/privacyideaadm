@@ -388,7 +388,7 @@ def yubikey_mass_enroll(ctx, yubiprefix, yubiprefixrandom, yubiprefixserial,
                 submit_param['type'] = 'TOTP'
                 submit_param['timeStep'] = 30
 
-        elif yubi_mode == MODE_STATIC:
+        elif yubimode == MODE_STATIC:
             password = create_static_password(otpkey)
             # print "otpkey   ", otpkey
             # print "password ", password
