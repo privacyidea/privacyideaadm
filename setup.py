@@ -45,14 +45,12 @@ setup(name=name,
                       'sphinx >= 2.0;python_version>="3.0"'],
       install_requires=[
           "cffi",
-          "enum34",
+          "click",
+          "cryptography",
           "python-yubico",
-          "pyusb",
           "qrcode",
           "requests",
-          'six',
-          "click",
-          "python-yubico"
+          "six"
       ],
       cmdclass=cmdclass,
       command_options={
@@ -69,7 +67,8 @@ setup(name=name,
                'scripts/privacyidea-authorizedkeys',
                'scripts/privacyidea-check-offline-otp',
                'scripts/privacyidea-get-offline-otp',
-               'scripts/privacyidea-validate'],
+               'scripts/privacyidea-validate',
+               'scripts/privacyidea-enroll-yubikey-piv'],
       data_files=[('share/man/man1', ["doc/_build/man/privacyidea.1"])],
       license='AGPLv3',
       long_description=get_file_contents('DESCRIPTION')
