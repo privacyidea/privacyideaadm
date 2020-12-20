@@ -78,6 +78,7 @@ def _call_pi(ctx, url, data, headers=None):
     except SSLError as e:
         logger.error('SSL connection failed', exc_info=e)
         click.echo('Could not establish a secure connection to {0!s}'.format(url))
+        click.echo(e)
         ctx.exit(1)
 
     # TODO: check response
@@ -186,10 +187,10 @@ def yk_list_keys(ctx):
                                          'when talking to privacyIDEA',
               is_flag=True)
 # TODO: The user is currently given in the Subject String
-@click.option('-u', '--user', help='YubiKey/Certificate user')
+@click.option('-u', '--user', help='YubiKey/Certificate user', default=None)
 @click.option('-a', '--admin', help='Admin user for the privacyIDEA API')
 @click.option('-p', '--password', help='Password of the admin user')
-@click.option('-t', '--token', help='Admin token for the privacyIDEA API')
+@click.option('-t', '--token', help='Admin token for the privacyIDEA API', default=None)
 @click.option('-c', '--ca', help='CA connector in privacyIDEA')
 @click.option('-k', '--keyfile', help='Verify response from privacyIDEA with key',
               default=None)
@@ -199,13 +200,13 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
     Create Certificate on YubiKey
     """
     if reader and device:
-        ctx.fail('--reader and --device options can\'t be combined.')
+        ctx.fail('--reader and --device options can\'t be combined!')
 
     if admin:
         if token:
-            ctx.fail('Choose either "admin"/"password" or "token" parameter!')
+            ctx.fail('Choose either "admin" and "password" or "token" parameter!')
         if not password:
-            ctx.fail('Password is required when using an admin user')
+            ctx.fail('Password is required when using an admin!')
 
     def resolve_device():
         if device is not None:
@@ -221,8 +222,7 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
         ctx.obj['controller'] = PivController(ctx.obj['dev'].driver)
     except APDUError as e:
         if e.sw == SW.NOT_FOUND:
-            click.echo("The PIV application can't be found on this YubiKey.")
-            ctx.exit(1)
+            ctx.fail("The PIV application can't be found on this YubiKey.")
         raise
 
     yk_key = ctx.obj['dev']
@@ -257,8 +257,7 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
                 touch_callback=_prompt_for_touch)
         except APDUError:
             logger.debug(sys.exc_info())
-            click.echo('Certificate Signing Request generation failed.')
-            ctx.exit(1)
+            ctx.fail('Certificate Signing Request generation failed.')
 
         with open('{0!s}_csr.pem'.format(yk_serial), 'wb') as f:
             f.write(csr.public_bytes(encoding=serialization.Encoding.PEM))
@@ -269,12 +268,11 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
         att_cert = yk_pc.attest(SLOT.AUTHENTICATION)
     except APDUError as e:
         logger.error('Attestation failed', exc_info=e)
-        click.echo('Attestation of YubiKey failed.')
-        ctx.exit(1)
+        ctx.fail('Attestation of YubiKey failed.')
     with open('{0!s}_attest.pem'.format(yk_serial), 'wb') as f:
         f.write(att_cert.public_bytes(encoding=serialization.Encoding.PEM))
 
-    # TODO: send the attestation certificate with the CSR to privacyIDEA
+    # TODO: make sending the attestation certificate to privacyIDEA optional
 
     if keyfile:
         with open(keyfile, 'rb') as f:
@@ -289,6 +287,8 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
                       data={'username': admin, 'password': password})
         if rj['result']['status'] is False:
             click.echo('Could not get auth-token from privacyIDEA at {0!s}'.format(url))
+            # TODO: Debug
+            click.echo(rj)
             ctx.exit(1)
         else:
             token = rj['result']['value']['token']
@@ -297,13 +297,17 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
     headers = {'content-type': 'application/json',
                'PI-Authorization': token}
     payload = {'type': 'certificate',
+               'user': user if user else None,
                'ca': ca,
                'template': 'user',
-               'request': csr.public_bytes(encoding=serialization.Encoding.PEM).decode()}
+               'request': csr.public_bytes(encoding=serialization.Encoding.PEM).decode(),
+               'attestation': att_cert.public_bytes(encoding=serialization.Encoding.PEM).decode()}
     rj = _call_pi(ctx, url=url + '/token/init', data=json.dumps(payload),
                   headers=headers)
     if rj['result']['status'] is False:
         click.echo('Could not get CSR signed by privacyIDEA')
+        # TODO: Debug
+        click.echo(rj)
         ctx.exit(1)
     cert = rj['detail']['certificate']
     pi_serial = rj['detail']['serial']
@@ -323,9 +327,8 @@ def yk_enroll_cert(ctx, reader, device, pin, management_key, subject, url,
 
         except KeypairMismatch as e:
             logger.error('Could not import certificate', exc_info=e)
-            click.echo('This certificate is not tied to the private key in the '
-                       '{} slot.'.format(SLOT.AUTHENTICATION.name))
-            ctx.exit(1)
+            ctx.fail('This certificate is not tied to the private key in the '
+                     '{} slot.'.format(SLOT.AUTHENTICATION.name))
 
         except APDUError as e:
             if e.sw == SW.SECURITY_CONDITION_NOT_SATISFIED and retry:

@@ -2,3 +2,9 @@
 cover
 dist
 *.pyc
+.eggs/
+.idea/
+build/
+venv*
+privacyideaadm.egg-info/
+doc/_build/
