@@ -10,4 +10,4 @@ pyusb==1.0.2
 qrcode==6.1
 requests==2.24.0
 six==1.15.0
-urllib3==1.25.9
+urllib3==1.26.5
