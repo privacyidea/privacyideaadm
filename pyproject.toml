@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "privacyideaadm"
+dynamic = ["version"]
+description = 'privacyIDEA admin Client'
+authors = [
+    {name = "Cornelius Kölbel", email = "cornelius@privacyidea.org"},
+]
+readme = {file = "README.md", content-type = "text/markdown"}
+requires-python = ">=3.7"
+keywords = ["2fa", "mfa", "privacyIDEA", "Yubikey", "Nitrokey"]
+license = {text = "AGPL-3.0-only"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Affero General Public License v3"
+]
+
+dependencies = [
+    "cffi",
+    "click",
+    "cryptography",
+    "python-yubico",
+    "qrcode",
+    "requests",
+    "six"
+]
+
+[project.optional-dependencies]
+doc = ["sphinx"]
+dev = ["pytest"]
+
+[project.urls]
+homepage = "https://www.privacyidea.org"
+repository = "https://github.com/privacyidea/privacyideaadm.git"
+changelog = "https://github.com/privacyidea/privacyideaadm/Changelog"
+
+[tool.setuptools_scm]
